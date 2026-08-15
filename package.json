@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "tsc -b && tsdown",
-    "prepare": "tsdown",
+    "prepare": "tsc -b && tsdown",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run --passWithNoTests",
     "watch": "tsdown --watch"
