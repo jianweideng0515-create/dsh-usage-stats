@@ -59,7 +59,7 @@ function formatRate(rate: number): string {
   return (rate * 100).toFixed(2) + '%'
 }
 
-/** donut 段色：从主题语义色派生（段 1-5 + 其他），CSS 变量拼接给 conic-gradient。 */
+/** donut 段色：从主题语义色派生（段 1-5 + 其他）。 */
 const DONUT_SEGMENT_VARS = [
   'var(--dsw-alias-state-business-primary)',
   'var(--dsw-alias-state-success-primary)',
@@ -84,6 +84,93 @@ function donutSegments(models: Array<{ model: string; requests: number }>): Arra
     share: m.requests / total,
     colorVar: DONUT_SEGMENT_VARS[i % DONUT_SEGMENT_VARS.length],
   }))
+}
+
+/** 模型占比 SVG 环形图（参考原型 stroke-dasharray donut，无库）。 */
+function DonutChart(props: {
+  t: (key: string) => string
+  segments: Array<{ model: string; requests: number; share: number; colorVar: string }>
+  total: number
+  centerLabel: string
+}): ReactElement {
+  const { t, segments, total, centerLabel } = props
+  const R = 15.9155 // 周长 100 的圆半径（参考原型同款）
+  const track = `M 18 2.0845 a ${R} ${R} 0 0 1 0 31.831 a ${R} ${R} 0 0 1 0 -31.831`
+  let cursor = 0
+  return (
+    <div className={styles.donutWrap}>
+      <div className={styles.donutSvgWrap}>
+        <svg viewBox="0 0 36 36" className={styles.donutSvg} role="img" aria-label={segments.map((s) => `${s.model}: ${Math.round(s.share * 100)}%`).join('; ')}>
+          <path d={track} fill="none" stroke="var(--dsw-alias-border-l2)" strokeWidth="4" />
+          {segments.map((s) => {
+            const offset = cursor * 100
+            cursor += s.share
+            return (
+              <path
+                key={s.model}
+                d={track}
+                fill="none"
+                stroke={s.colorVar}
+                strokeWidth="4"
+                strokeDasharray={`${Math.max(0.4, s.share * 100)} 100`}
+                strokeDashoffset={`${-offset}`}
+              />
+            )
+          })}
+        </svg>
+        <div className={styles.donutHole}>
+          <span className={styles.donutTotal}>{total}</span>
+          <span className={styles.donutTotalLabel}>{centerLabel}</span>
+        </div>
+      </div>
+      <ul className={styles.legend}>
+        {segments.map((s) => (
+          <li key={s.model}>
+            <span className={styles.legendDot} style={{ background: s.colorVar }} />
+            <span className={styles.legendModel}>{s.model === '__other__' ? t('chart.other') : s.model}</span>
+            <span className={styles.legendShare}>{Math.round(s.share * 100)}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** KPI 卡内联图标（无外部依赖、无 emoji）。 */
+function KpiIcon(props: { kind: 'chart' | 'send' | 'bolt' | 'wallet' }): ReactElement {
+  const { kind } = props
+  if (kind === 'chart') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 3v18h18" />
+        <rect x="7" y="12" width="3" height="6" rx="0.8" />
+        <rect x="13" y="8" width="3" height="10" rx="0.8" />
+        <rect x="19" y="5" width="3" height="13" rx="0.8" />
+      </svg>
+    )
+  }
+  if (kind === 'send') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M22 2 11 13" />
+        <path d="M22 2 15 22l-4-9-9-4Z" />
+      </svg>
+    )
+  }
+  if (kind === 'bolt') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />
+      </svg>
+    )
+  }
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+      <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+      <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+    </svg>
+  )
 }
 
 /** 单条 SVG 折线（无库）：数据点不足阈值时返回 null，由调用方显示占位。 */
@@ -277,21 +364,27 @@ function OverviewTab(props: {
     <>
       <div className={styles.kpiGrid}>
         <div className={styles.kpiCard}>
-          <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-business-primary)' }} />
+          <div className={styles.kpiTop}>
+            <span>{t('metric.tokens')}</span>
+            <KpiIcon kind="chart" />
+          </div>
           <dd className={styles.kpiValue} title={t('metric.tokensHint')}>{formatTokens(summary.tokens.total)}</dd>
-          <dt className={styles.kpiLabel}>{t('metric.tokens')}</dt>
           <dd className={styles.kpiSub}>{t('kpi.costPrefix')}: {formatCost(summary.cost)}</dd>
         </div>
         <div className={styles.kpiCard}>
-          <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary))' }} />
+          <div className={styles.kpiTop}>
+            <span>{t('metric.requests')}</span>
+            <KpiIcon kind="send" />
+          </div>
           <dd className={styles.kpiValue}>{summary.requests}</dd>
-          <dt className={styles.kpiLabel}>{t('metric.requests')}</dt>
           <dd className={styles.kpiSub}>{summary.turns} {t('metric.turns')} · {summary.activeDays} {t('kpi.daysUnit')}</dd>
         </div>
         <div className={styles.kpiCard}>
-          <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-success-primary)' }} />
+          <div className={styles.kpiTop}>
+            <span>{t('metric.avgHitRate')}</span>
+            <KpiIcon kind="bolt" />
+          </div>
           <dd className={styles.kpiValueEmerald}>{formatRate(summary.avgCacheHitRate)}</dd>
-          <dt className={styles.kpiLabel}>{t('metric.avgHitRate')}</dt>
           <dd className={styles.kpiSub}>{t('kpi.hitTokens')} {formatTokens(summary.tokens.cacheReadTokens)}</dd>
         </div>
         <div className={styles.kpiCardDynamic}>
@@ -324,11 +417,18 @@ function OverviewTab(props: {
       ) : null}
       <h4 className={styles.heading}>{t('model.table')}</h4>
       <table className={styles.table}>
-        <thead><tr><th>{t('metric.topModel')}</th><th>{t('metric.requests')}</th><th>{t('metric.tokens')}</th><th>{t('metric.cost')}</th></tr></thead>
+        <thead><tr><th>{t('metric.topModel')}</th><th className={styles.thRight}>{t('metric.requests')}</th><th className={styles.thRight}>{t('metric.tokens')}</th><th className={styles.thRight}>{t('metric.cost')}</th></tr></thead>
         <tbody>
-          {summary.byModel.map((m) => (
-            <tr key={m.model}>
-              <td>{m.model}</td><td>{m.requests}</td><td>{formatTokens(m.tokens)}</td><td>{formatCost(m.cost)}</td>
+          {summary.byModel.map((m, i) => (
+            <tr key={m.model} className={styles.trHover}>
+              <td>
+                <span className={styles.modelDot} style={{ background: DONUT_SEGMENT_VARS[i % DONUT_SEGMENT_VARS.length] }} />
+                <strong>{m.model}</strong>
+                {m.model === '__unknown__' ? <span className={styles.unknownTag}>__unknown__</span> : null}
+              </td>
+              <td className={styles.tdRight}>{m.requests}</td>
+              <td className={`${styles.tdRight} ${styles.tdStrong}`}>{formatTokens(m.tokens)}</td>
+              <td className={styles.tdRight}>{formatCost(m.cost)}</td>
             </tr>
           ))}
         </tbody>
@@ -343,34 +443,20 @@ function ModelsTab(props: {
   t: (key: string) => string
   summary: SummaryResponse
   segments: Array<{ model: string; requests: number; share: number; colorVar: string }>
-  donutStyle: CSSProperties | undefined
   hitRateSeries: number[]
   costSeries: number[]
   costAllZero: boolean
 }): ReactElement {
-  const { t, summary, segments, donutStyle, hitRateSeries, costSeries, costAllZero } = props
+  const { t, summary, segments, hitRateSeries, costSeries, costAllZero } = props
+  // 缓存效率诊断：命中率（成功绿）+ 节省 Tokens + 节省比例
+  const inputTotal = summary.tokens.uncachedInputTokens + summary.tokens.cacheReadTokens + summary.tokens.cacheWriteTokens
+  const savedRatio = inputTotal > 0 ? (summary.tokens.cacheReadTokens / inputTotal) * 100 : 0
   return (
     <div className={styles.chartRow}>
       <div className={styles.chartCell}>
         <h4 className={styles.heading}>{t('chart.donut')}</h4>
         {segments.length === 0 ? <p className={styles.status}>{t('chart.noData')}</p> : (
-          <div className={styles.donutWrap}>
-            <div className={styles.donut} style={donutStyle} role="img" aria-label={segments.map((s) => `${s.model}: ${Math.round(s.share * 100)}%`).join('; ')}>
-              <div className={styles.donutHole}>
-                <span className={styles.donutTotal}>{summary.requests}</span>
-                <span className={styles.donutTotalLabel}>{t('metric.requests')}</span>
-              </div>
-            </div>
-            <ul className={styles.legend}>
-              {segments.map((s) => (
-                <li key={s.model}>
-                  <span className={styles.legendDot} style={{ background: s.colorVar }} />
-                  <span className={styles.legendModel}>{s.model === '__other__' ? t('chart.other') : s.model}</span>
-                  <span className={styles.legendShare}>{Math.round(s.share * 100)}%</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <DonutChart t={t} segments={segments} total={summary.requests} centerLabel={t('metric.requests')} />
         )}
       </div>
       <div className={styles.chartCell}>
@@ -378,6 +464,10 @@ function ModelsTab(props: {
         <div className={styles.cacheDiag}>
           <strong>{t('chart.cacheHigh')} ({formatRate(summary.avgCacheHitRate)})</strong>
           <span>{t('chart.cacheSaved')} {formatTokens(summary.tokens.cacheReadTokens)}</span>
+          <div className={styles.cacheDiagRows}>
+            <div className={styles.cacheDiagRow}><span>{t('kpi.hitTokens')}</span><strong>{formatTokens(summary.tokens.cacheReadTokens)}</strong></div>
+            <div className={styles.cacheDiagRow}><span>{t('chart.savedRatio')}</span><strong>{savedRatio.toFixed(1)}%</strong></div>
+          </div>
         </div>
       </div>
       <div className={styles.chartCell}>
@@ -472,10 +562,15 @@ function QuotaTab(props: {
       { key: 'monthly', label: t('quota.monthly'), window: quota.monthly },
     ] as const
     return (
-      <div className={styles.quotaGrid}>
-        {rows.map((row) => (
-          <QuotaWindowCard key={row.key} t={t} label={row.label} window={row.window} highlight={row.key === 'weekly'} />
-        ))}
+      <div className={styles.quotaView}>
+        <div className={styles.quotaGrid}>
+          {rows.map((row) => (
+            <QuotaWindowCard key={row.key} t={t} label={row.label} window={row.window} highlight={row.key === 'weekly'} />
+          ))}
+        </div>
+        <div className={styles.noticeBar}>
+          <span>{t('quota.notice')}</span>
+        </div>
       </div>
     )
   }
@@ -531,16 +626,6 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
   const [activeTab, setActiveTab] = useState<'overview' | 'models' | 'quota'>('overview')
   const [provider, setProvider] = useState<ProviderId>('opencode')
   const segments = useMemo(() => summary === null ? [] : donutSegments(summary.byModel), [summary])
-  const donutStyle = useMemo(() => {
-    if (segments.length === 0) return undefined
-    let cursor = 0
-    const stops = segments.map((s) => {
-      const from = cursor
-      cursor += s.share
-      return `${s.colorVar} ${(from * 100).toFixed(2)}% ${(cursor * 100).toFixed(2)}%`
-    })
-    return { background: `conic-gradient(${stops.join(', ')})` }
-  }, [segments])
   const hitRateSeries = summary?.series.map((p) => p.hitRate) ?? []
   const costSeries = summary?.series.map((p) => p.cost) ?? []
   const costAllZero = summary !== null && summary.cost === 0 && summary.uncountedRequests > 0
@@ -548,12 +633,12 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
   return (
     <div className={styles.content}>
       <div className={styles.controlBar}>
-        <div className={styles.rangeRow}>
+        <div className={styles.timeSegment}>
           {RANGES.map((r) => (
             <button
               key={r.key}
               type="button"
-              className={props.rangeDays === r.days ? styles.rangeActive : styles.range}
+              className={props.rangeDays === r.days ? styles.timeBtnActive : styles.timeBtn}
               onClick={() => props.onRangeDays(r.days)}
             >
               {t('range.' + r.key)}
@@ -561,7 +646,7 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
           ))}
           <button
             type="button"
-            className={props.rangeDays === 'custom' ? styles.rangeActive : styles.range}
+            className={props.rangeDays === 'custom' ? styles.timeBtnActive : styles.timeBtn}
             onClick={() => props.onRangeDays('custom')}
           >
             {t('range.custom')}
@@ -617,7 +702,7 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
             <OverviewTab t={t} summary={summary} provider={provider} balance={balance} />
           ) : null}
           {activeTab === 'models' ? (
-            <ModelsTab t={t} summary={summary} segments={segments} donutStyle={donutStyle} hitRateSeries={hitRateSeries} costSeries={costSeries} costAllZero={costAllZero} />
+            <ModelsTab t={t} summary={summary} segments={segments} hitRateSeries={hitRateSeries} costSeries={costSeries} costAllZero={costAllZero} />
           ) : null}
           {activeTab === 'quota' ? (
             <QuotaTab t={t} provider={provider} summary={summary} balance={balance} balanceRefreshing={props.balanceRefreshing} onRefreshBalance={props.onRefreshBalance} />

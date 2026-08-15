@@ -361,13 +361,6 @@
 
 /* usage-stats card body */
 
-.rangeRow {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
 /* 控制栏：时间范围 + 提供商切换 */
 .controlBar {
   display: flex;
@@ -379,6 +372,41 @@
   background: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 8px;
+}
+
+/* 时间范围 segmented（参考 timeSegment：白底圆角容器） */
+.timeSegment {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--dsw-alias-bg-layer-3);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+}
+
+.timeBtn,
+.timeBtnActive {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  transition: background-color 0.13s, color 0.13s;
+}
+
+.timeBtn:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.timeBtnActive {
+  background: var(--dsw-alias-button-info-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+  font-weight: 600;
 }
 
 .providerRow {
@@ -452,31 +480,6 @@
   color: var(--dsw-alias-label-primary);
   font-weight: 600;
   border-bottom-color: var(--dsw-alias-button-info-fill);
-}
-
-.range,
-.rangeActive {
-  font: inherit;
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  background: transparent;
-  color: var(--dsw-alias-label-secondary);
-  cursor: pointer;
-  transition: background-color 0.13s, border-color 0.13s, color 0.13s;
-}
-
-.range:hover {
-  color: var(--dsw-alias-label-primary);
-  border-color: var(--dsw-alias-label-dimmed);
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-
-.rangeActive {
-  border-color: var(--dsw-alias-button-info-fill);
-  background: var(--dsw-alias-button-info-fill);
-  color: var(--dsw-alias-label-primary-foreground);
 }
 
 .customRow {
@@ -632,7 +635,7 @@
 
 .table th,
 .table td {
-  padding: 4px 8px;
+  padding: 6px 10px;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
   text-align: left;
   white-space: nowrap;
@@ -648,6 +651,46 @@
 
 .table td {
   color: var(--dsw-alias-label-primary);
+}
+
+/* 数值列右对齐 + 等宽（参考 tdRight） */
+.thRight {
+  text-align: right;
+}
+
+.tdRight {
+  text-align: right;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.tdStrong {
+  font-weight: 600;
+}
+
+.trHover:hover td {
+  background: color-mix(in srgb, var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary)) 6%, transparent);
+}
+
+/* 模型色点 + 未知模型标签（参考模型明细表） */
+.modelDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.unknownTag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--dsw-alias-label-tertiary);
+  background: var(--dsw-alias-bg-layer-3);
+  border: 1px solid var(--dsw-alias-border-l2);
+  vertical-align: middle;
 }
 
 .balance {
@@ -680,12 +723,11 @@
   cursor: default;
 }
 
-/* KPI 指标卡网格 */
-
+/* KPI 指标卡网格（参考 kpiGrid：4 列） */
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
   min-width: 0;
 }
 
@@ -693,11 +735,11 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
-  padding: 10px 12px 8px;
+  padding: 12px 14px 10px;
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--dsw-alias-bg-layer-2);
   overflow: hidden;
   transition: border-color 0.16s, background 0.16s;
@@ -708,29 +750,31 @@
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
-.kpiAccent {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  opacity: 0.85;
+/* KPI 卡标题行（标题左 + 图标右，参考 kpiTop） */
+.kpiTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+  white-space: nowrap;
+}
+
+.kpiTop svg {
+  color: var(--dsw-alias-label-tertiary);
+  flex: none;
 }
 
 .kpiValue {
   margin: 0;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.kpiLabel {
-  font-size: 11px;
-  color: var(--dsw-alias-label-tertiary);
+  letter-spacing: -0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -750,10 +794,11 @@
 /* 缓存命中率强调色（与参考翡翠绿一致） */
 .kpiValueEmerald {
   margin: 0;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-state-success-primary);
+  letter-spacing: -0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -764,11 +809,11 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
-  padding: 10px 12px 8px;
+  padding: 12px 14px 10px;
   border: 1px solid color-mix(in srgb, var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary)) 40%, var(--dsw-alias-border-l2));
-  border-radius: 8px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary)) 8%, var(--dsw-alias-bg-layer-2));
   overflow: hidden;
 }
@@ -792,10 +837,11 @@
 
 .kpiValueAccent {
   margin: 0;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary));
+  letter-spacing: -0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -854,6 +900,31 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 缓存诊断指标行（参考：两行 label/值） */
+.cacheDiagRows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--dsw-alias-state-success-primary) 20%, transparent);
+}
+
+.cacheDiagRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.cacheDiagRow strong {
+  font-weight: 600;
+  color: var(--dsw-alias-state-success-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 /* 图表区：donut + 折线并排 */
 
 .chartRow {
@@ -877,28 +948,36 @@
   min-width: 0;
 }
 
-.donut {
+/* SVG 环形图（参考 stroke-dasharray donut） */
+.donutSvgWrap {
   position: relative;
-  width: 84px;
-  height: 84px;
-  border-radius: 50%;
+  width: 92px;
+  height: 92px;
   flex: none;
+}
+
+.donutSvg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  display: block;
 }
 
 .donutHole {
   position: absolute;
-  inset: 14px;
+  inset: 22%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0;
   border-radius: 50%;
-  background: var(--dsw-alias-bg-layer-3);
+  background: transparent;
+  pointer-events: none;
 }
 
 .donutTotal {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-primary);
@@ -1404,11 +1483,32 @@
 }
 
 /* 配额窗口进度条卡（OpenCode：滚动/每周/每月） */
+.quotaView {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
 .quotaGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
   min-width: 0;
+}
+
+/* 参考 noticeBar：提示条 */
+.noticeBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--dsw-alias-bg-layer-2);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--dsw-alias-label-secondary);
 }
 
 .quotaCard {

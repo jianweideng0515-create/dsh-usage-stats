@@ -55,9 +55,11 @@ export interface UsageStatsCopy {
   'quota.high': string
   'quota.used': string
   'quota.resetLabel': string
+  'quota.notice': string
   'balance.estimate': string
   'balance.days': string
   'balance.sufficient': string
+  'chart.savedRatio': string
   'range.last7': string
   'range.last14': string
   'range.last30': string
@@ -177,9 +179,11 @@ export const zh: UsageStatsCopy = {
   'quota.high': '告警',
   'quota.used': '已用',
   'quota.resetLabel': '重置时间',
+  'quota.notice': '在 opencode 配置中选择「OpenCode Go」作为提供商即可自动激活限额机制。',
   'balance.estimate': '预计可支撑约',
   'balance.days': '天消耗',
   'balance.sufficient': '余额充足',
+  'chart.savedRatio': '节省比例',
   'range.last7': '最近 7 天',
   'range.last14': '最近 14 天',
   'range.last30': '最近 30 天',
@@ -296,9 +300,11 @@ export const en: UsageStatsCopy = {
   'quota.high': 'High',
   'quota.used': 'used',
   'quota.resetLabel': 'Reset at',
+  'quota.notice': 'Choose "OpenCode Go" as the provider in opencode config to activate the quota mechanism.',
   'balance.estimate': 'Estimated to cover about',
   'balance.days': 'days of usage',
   'balance.sufficient': 'Sufficient balance',
+  'chart.savedRatio': 'Saved ratio',
   'range.last7': 'Last 7 days',
   'range.last14': 'Last 14 days',
   'range.last30': 'Last 30 days',
