@@ -104,14 +104,21 @@ export async function fetchSessionUsage(sessionId: string, signal?: AbortSignal)
   return body.perSession
 }
 
-export async function fetchBalance(signal?: AbortSignal): Promise<BalanceResponse> {
+/** 多 provider 余额/配额快照表（key 为 provider id，如 opencode-go / deepseek）。 */
+export type BalanceMap = Record<string, BalanceResponse>
+
+/** 拉取全部 provider 的余额/配额快照（host 定时刷新，此处只读）。 */
+export async function fetchBalance(signal?: AbortSignal): Promise<BalanceMap> {
   const response = await fetch('/api/dsh-usage-stats/balance', { signal })
   if (!response.ok) throw new Error(`balance HTTP ${response.status}`)
-  return response.json() as Promise<BalanceResponse>
+  const body = await response.json() as { providers: BalanceMap }
+  return body.providers
 }
 
-export async function refreshBalance(): Promise<BalanceResponse> {
+/** 手动触发一次全量余额/配额刷新并返回新快照表。 */
+export async function refreshBalance(): Promise<BalanceMap> {
   const response = await fetch('/api/dsh-usage-stats/balance/refresh', { method: 'POST' })
   if (!response.ok) throw new Error(`refresh HTTP ${response.status}`)
-  return response.json() as Promise<BalanceResponse>
+  const body = await response.json() as { providers: BalanceMap }
+  return body.providers
 }

@@ -10,7 +10,7 @@ vi.mock('@deepseek-ai/dsh-client-runtime/client', () => ({
   }),
   SnapshotStore: {},
 }))
-import type { SummaryResponse } from '../../src/client/api.ts'
+import type { BalanceMap, SummaryResponse } from '../../src/client/api.ts'
 import { UsageStatsCard } from '../../src/client/UsageStatsCard.tsx'
 
 const summary: SummaryResponse = {
@@ -22,6 +22,18 @@ const summary: SummaryResponse = {
   byModel: [{ model: 'deepseek-chat', requests: 11, tokens: 1700, cost: 0.33 }],
   series: [{ bucket: '2026-08-14', requests: 5, tokens: 800, cost: 0.15, hitRate: 0.3, byModel: [] }],
   perSession: { sessionId: 's1', workspace: null, turns: 3, requests: 4, cost: 0.1, lastRequestAt: null, lastModel: 'deepseek-chat', lastRequestCost: 0.05, lastRequestHitRate: 0.4 },
+}
+
+/** 默认多 provider 快照：opencode 未接入（无配额）、deepseek 有金额余额。 */
+const balances: BalanceMap = {
+  opencode: { balance: null, currency: '', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' },
+  deepseek: { balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' },
+}
+
+/** 两个 provider 均无可展示数据的空快照。 */
+const balancesEmpty: BalanceMap = {
+  opencode: { balance: null, currency: '', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' },
+  deepseek: { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' },
 }
 
 const baseProps = {
@@ -46,7 +58,7 @@ describe('UsageStatsCard', () => {
     render(<UsageStatsCard
       t={t}
       summary={summary}
-      balance={{ balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' }}
+      balances={balances}
       loading={false}
       error={null}
       {...baseProps}
@@ -68,7 +80,7 @@ describe('UsageStatsCard', () => {
     render(<UsageStatsCard
       t={t}
       summary={{ ...summary, avgCacheHitRate: 0.9984 }}
-      balance={{ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' }}
+      balances={balancesEmpty}
       loading={false}
       error={null}
       {...baseProps}
@@ -83,7 +95,7 @@ describe('UsageStatsCard', () => {
     render(<UsageStatsCard
       t={t}
       summary={summary}
-      balance={{ balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' }}
+      balances={balances}
       loading={false}
       error={null}
       {...baseProps}
@@ -110,7 +122,7 @@ describe('UsageStatsCard', () => {
     render(<UsageStatsCard
       t={t}
       summary={summary}
-      balance={{ balance: null, currency: '', updatedAt: null, error: null, source: { baseUrl: 'x', path: '/usage', apiKeyEnv: 'K', source: 'auto:opencode-go' }, quota, costCurrency: 'CNY' }}
+      balances={{ opencode: { balance: null, currency: '', updatedAt: null, error: null, source: { baseUrl: 'x', path: '/usage', apiKeyEnv: 'K', source: 'auto:opencode-go' }, quota, costCurrency: 'CNY' }, deepseek: { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' } }}
       loading={false}
       error={null}
       {...baseProps}
@@ -133,7 +145,7 @@ describe('UsageStatsCard', () => {
     render(<UsageStatsCard
       t={t}
       summary={summary}
-      balance={{ balance: null, currency: 'CNY', updatedAt: null, error: 'provider does not expose an endpoint', source: null, quota: null, costCurrency: 'CNY' }}
+      balances={{ opencode: { balance: null, currency: 'CNY', updatedAt: null, error: 'provider does not expose an endpoint', source: null, quota: null, costCurrency: 'CNY' }, deepseek: { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' } }}
       loading={false}
       error={null}
       {...baseProps}
@@ -153,7 +165,7 @@ describe('UsageStatsCard', () => {
           { bucket: '2026-08-16', requests: 200, tokens: 40_000_000, cost: 0.3, hitRate: 0.9, byModel: [{ model: 'deepseek-chat', tokens: 40_000_000 }] },
         ],
       }}
-      balance={{ balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' }}
+      balances={balances}
       loading={false}
       error={null}
       {...baseProps}

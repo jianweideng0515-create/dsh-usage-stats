@@ -26,8 +26,14 @@ const { mockSessionResponses } = vi.hoisted(() => ({
 
 vi.mock('../../src/client/api.ts', () => ({
   fetchSessionUsage: vi.fn((sid: string) => Promise.resolve(mockSessionResponses.get(sid) ?? null)),
-  fetchBalance: vi.fn(() => Promise.resolve({ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' })),
-  refreshBalance: vi.fn(() => Promise.resolve({ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' })),
+  fetchBalance: vi.fn(() => Promise.resolve({
+    opencode: { balance: null, currency: '', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' },
+    deepseek: { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' },
+  })),
+  refreshBalance: vi.fn(() => Promise.resolve({
+    opencode: { balance: null, currency: '', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' },
+    deepseek: { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' },
+  })),
 }))
 
 /** 文件级清理：每个用例后卸载 DOM（vitest 未开 globals，无自动 cleanup）。 */

@@ -13,7 +13,7 @@ import { UsageStatsStore } from './store.ts'
 import { makeRoutes } from './routes.ts'
 import { BalanceClient } from './balance.ts'
 import type { BalanceSettings } from './provider-detect.ts'
-import { detectBalanceEndpoint } from './provider-detect.ts'
+import { detectBalanceEndpoints } from './provider-detect.ts'
 
 /**
  * 读取 DSH 凭据文件（~/.dsh/.credentials.yaml，形如 "KEY: value" 行）。
@@ -136,12 +136,14 @@ export function apply(ctx: Context, config: Config = {}): void {
     const value = resolve().balance ?? { mode: 'auto' }
     balance.setSettings(value)
     balance.setDetect(() => {
-      const result = detectBalanceEndpoint(ctx, resolve().balance ?? { mode: 'auto' }, settingsService)
-      if (!result.ok) {
-        // 诊断：记录推断失败时的服务与命名空间状态（生产排查余额不可用原因）
-        ctx.logger.warn(`usage-stats: balance detect failed: ${result.reason} (settings captured: ${settingsService !== undefined})`)
+      const detected = detectBalanceEndpoints(ctx, resolve().balance ?? { mode: 'auto' }, settingsService)
+      for (const [provider, result] of Object.entries(detected)) {
+        if (!result.ok) {
+          // 诊断：记录每个 provider 推断失败的原因（生产排查余额不可用原因）
+          ctx.logger.warn(`usage-stats: balance detect failed for ${provider}: ${result.reason} (settings captured: ${settingsService !== undefined})`)
+        }
       }
-      return result
+      return detected
     })
     // 配置源变化（settings 挂载/热更新）后立即用新配置刷新一次快照：
     // setSource 触发晚于 start() 的首次 refresh，若不补刷，快照会停留在

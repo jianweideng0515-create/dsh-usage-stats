@@ -88,28 +88,36 @@ export function parseOpenCodeUsage(body: unknown): UsageQuota | null {
 
 export class BalanceClient {
   private settings: BalanceSettings = { mode: 'off' }
-  private detect: () => DetectResult = () => ({ ok: false, reason: 'disabled' })
-  private last: BalanceSnapshot = { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' }
+  private detect: () => Record<string, DetectResult> = () => ({})
+  private last: Record<string, BalanceSnapshot> = {}
 
   constructor(private readonly deps: BalanceClientDeps) {}
 
   setSettings(settings: BalanceSettings): void { this.settings = settings }
-  setDetect(fn: () => DetectResult): void { this.detect = fn }
-  snapshot(): BalanceSnapshot { return this.last }
+  setDetect(fn: () => Record<string, DetectResult>): void { this.detect = fn }
+  /** 最近一次各 provider 快照（provider id → 快照；未检测到的 provider 不在表内）。 */
+  snapshot(): Record<string, BalanceSnapshot> { return this.last }
   /** 费用计价货币（设置 currency 实时读取）。 */
   private costCurrency(): string { return this.deps.getCostCurrency?.() ?? 'CNY' }
 
-  async refresh(): Promise<BalanceSnapshot> {
-    const result = this.detect()
-    if (!result.ok) {
-      this.last = FAIL(result.reason, null, this.costCurrency())
-      return this.last
-    }
-    const endpoint = result.endpoint
+  /** 并行刷新全部检测到的 provider 快照；单个 provider 失败不影响其他。 */
+  async refresh(): Promise<Record<string, BalanceSnapshot>> {
+    const detected = this.detect()
+    const next: Record<string, BalanceSnapshot> = { ...this.last }
+    await Promise.all(Object.entries(detected).map(async ([provider, result]) => {
+      next[provider] = result.ok
+        ? await this.fetchEndpoint(result.endpoint)
+        : FAIL(result.reason, null, this.costCurrency())
+    }))
+    this.last = next
+    return this.last
+  }
+
+  /** 拉取并解析单个端点的快照（key 缺失、网络错误、格式不符均落 FAIL）。 */
+  private async fetchEndpoint(endpoint: BalanceEndpoint): Promise<BalanceSnapshot> {
     const key = this.deps.getEnv(endpoint.apiKeyEnv)
     if (key === undefined || key === '') {
-      this.last = FAIL('missing API key', endpoint, this.costCurrency())
-      return this.last
+      return FAIL('missing API key', endpoint, this.costCurrency())
     }
     let response: Response
     try {
@@ -126,28 +134,24 @@ export class BalanceClient {
         signal: AbortSignal.timeout(25_000),
       })
     } catch (error) {
-      this.last = FAIL(`network error: ${String(error)}`, endpoint, this.costCurrency())
-      return this.last
+      return FAIL(`network error: ${String(error)}`, endpoint, this.costCurrency())
     }
     if (!response.ok) {
-      this.last = FAIL(`HTTP ${response.status}`, endpoint, this.costCurrency())
-      return this.last
+      return FAIL(`HTTP ${response.status}`, endpoint, this.costCurrency())
     }
     let body: unknown
     try {
       body = await response.json()
     } catch {
-      this.last = FAIL('unexpected response', endpoint, this.costCurrency())
-      return this.last
+      return FAIL('unexpected response', endpoint, this.costCurrency())
     }
     // 端点按路径区分：/usage 为 OpenCode 配额，/user/balance 为 DeepSeek 金额。
     if (endpoint.path.includes('/usage')) {
       const quota = parseOpenCodeUsage(body)
       if (quota === null) {
-        this.last = FAIL('unexpected response', endpoint, this.costCurrency())
-        return this.last
+        return FAIL('unexpected response', endpoint, this.costCurrency())
       }
-      this.last = {
+      return {
         balance: null,
         currency: '',
         updatedAt: new Date().toISOString(),
@@ -156,14 +160,12 @@ export class BalanceClient {
         quota,
         costCurrency: this.costCurrency(),
       }
-      return this.last
     }
     const parsed = parseBalanceResponse(body)
     if (parsed === null) {
-      this.last = FAIL('unexpected response', endpoint, this.costCurrency())
-      return this.last
+      return FAIL('unexpected response', endpoint, this.costCurrency())
     }
-    this.last = {
+    return {
       balance: parsed.balance,
       currency: parsed.currency,
       updatedAt: new Date().toISOString(),
@@ -172,7 +174,6 @@ export class BalanceClient {
       quota: null,
       costCurrency: this.costCurrency(),
     }
-    return this.last
   }
 
   /** 立即刷新一次并定时刷新；返回定时器 disposer。 */

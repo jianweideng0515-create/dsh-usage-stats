@@ -3,7 +3,7 @@ import type { CSSProperties, ReactElement } from 'react'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { fetchBalance, fetchSummary, refreshBalance } from './api.ts'
-import type { BalanceResponse, SummaryResponse } from './api.ts'
+import type { BalanceMap, BalanceResponse, SummaryResponse } from './api.ts'
 import styles from './card.module.css'
 
 /** 统计卡片主体所需的 props（受控组件，数据由 controller 轮询提供）。 */
@@ -12,8 +12,8 @@ export interface UsageStatsCardProps {
   t: (key: string) => string
   /** 区间汇总；null 表示尚未拿到数据。 */
   summary: SummaryResponse | null
-  /** 余额快照；null 表示仍在加载。 */
-  balance: BalanceResponse | null
+  /** 各 provider 余额/配额快照表；null 表示尚未拿到数据。 */
+  balances: BalanceMap | null
   /** 请求进行中。 */
   loading: boolean
   /** 最近一次请求错误。 */
@@ -774,9 +774,11 @@ function formatResetCountdown(resetsAt: string | null, t: (key: string) => strin
 
 /** 统计卡片主体：折叠卡头 + 控制栏 + 4 KPI 卡 + 三级 Tab。 */
 export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
-  const { t, summary, balance, loading, error } = props
+  const { t, summary, balances, loading, error } = props
   const [activeTab, setActiveTab] = useState<'overview' | 'models' | 'quota'>('overview')
   const [provider, setProvider] = useState<ProviderId>('opencode')
+  // 当前 provider 的余额/配额快照（多 provider 表按 provider id 取）
+  const balance: BalanceResponse | null = balances?.[provider] ?? null
   const segments = useMemo(() => summary === null ? [] : donutSegments(summary.byModel), [summary])
   const hitRateSeries = summary?.series.map((p) => p.hitRate) ?? []
   const costSeries = summary?.series.map((p) => p.cost) ?? []
@@ -870,7 +872,7 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
 /** 卡片投影快照（controller 注入给渲染层）。 */
 export interface UsageStatsCardStore {
   summary: SummaryResponse | null
-  balance: BalanceResponse | null
+  balances: BalanceMap | null
   loading: boolean
   error: string | null
   rangeDays: number | 'custom'
@@ -929,7 +931,7 @@ export class UsageStatsCardController {
   private customFrom = ''
   private customTo = ''
   private summary: SummaryResponse | null = null
-  private balance: BalanceResponse | null = null
+  private balances: BalanceMap | null = null
   private loading = false
   private error: string | null = null
   private balanceRefreshing = false
@@ -959,7 +961,7 @@ export class UsageStatsCardController {
   private projection(): UsageStatsCardStore {
     return {
       summary: this.summary,
-      balance: this.balance,
+      balances: this.balances,
       loading: this.loading,
       error: this.error,
       rangeDays: this.rangeDays,
@@ -1031,9 +1033,14 @@ export class UsageStatsCardController {
 
   private async pollBalance(): Promise<void> {
     try {
-      this.balance = await fetchBalance()
+      this.balances = await fetchBalance()
     } catch (e) {
-      this.balance = { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null, quota: null, costCurrency: 'CNY' }
+      const error = String((e as Error)?.message ?? e)
+      // 拉取失败：为两个内置 provider 各落一条错误快照，保证 UI 可展示失败原因
+      this.balances = {
+        opencode: { balance: null, currency: '', updatedAt: null, error, source: null, quota: null, costCurrency: 'CNY' },
+        deepseek: { balance: null, currency: 'CNY', updatedAt: null, error, source: null, quota: null, costCurrency: 'CNY' },
+      }
     }
     this.publish()
   }
@@ -1060,9 +1067,13 @@ export class UsageStatsCardController {
         this.publish()
         void (async () => {
           try {
-            this.balance = await refreshBalance()
+            this.balances = await refreshBalance()
           } catch (e) {
-            this.balance = { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null, quota: null, costCurrency: 'CNY' }
+            const error = String((e as Error)?.message ?? e)
+            this.balances = {
+              opencode: { balance: null, currency: '', updatedAt: null, error, source: null, quota: null, costCurrency: 'CNY' },
+              deepseek: { balance: null, currency: 'CNY', updatedAt: null, error, source: null, quota: null, costCurrency: 'CNY' },
+            }
           }
           this.balanceRefreshing = false
           this.publish()

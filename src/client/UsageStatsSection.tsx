@@ -46,7 +46,7 @@ export function UsageStatsSection(_props: PropsRuntime<'settings.section'>): Rea
       <UsageStatsCard
         t={t}
         summary={state.summary}
-        balance={state.balance}
+        balances={state.balances}
         loading={state.loading}
         error={state.error}
         rangeDays={state.rangeDays}

@@ -85,25 +85,25 @@ export function makeRoutes(ctx: Context, balance: BalanceClient): WebRoute[] {
     },
   }
 
-  // GET /balance：返回最近一次余额快照（定时器维护）。
+  // GET /balance：返回最近一次各 provider 余额/配额快照（定时器维护）。
   const balanceRoute: WebRoute = {
     kind: 'exact',
     path: '/api/dsh-usage-stats/balance',
     handler: (req, res) => {
       if (!isLoopbackRequest(req)) { writeJson(res, 403, { error: 'forbidden' }); return }
       if (req.method !== 'GET') { writeJson(res, 405, { error: 'method not allowed' }); return }
-      writeJson(res, 200, balance.snapshot())
+      writeJson(res, 200, { providers: balance.snapshot() })
     },
   }
 
-  // POST /balance/refresh：立即重新拉取一次余额。
+  // POST /balance/refresh：立即重新拉取一次全部 provider 余额。
   const refreshBalance: WebRoute = {
     kind: 'exact',
     path: '/api/dsh-usage-stats/balance/refresh',
     handler: async (req, res) => {
       if (!isLoopbackRequest(req)) { writeJson(res, 403, { error: 'forbidden' }); return }
       if (req.method !== 'POST') { writeJson(res, 405, { error: 'method not allowed' }); return }
-      writeJson(res, 200, await balance.refresh())
+      writeJson(res, 200, { providers: await balance.refresh() })
     },
   }
 

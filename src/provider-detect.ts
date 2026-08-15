@@ -7,7 +7,7 @@ import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 
 /** 余额模式的用户配置。 */
 export interface BalanceSettings {
-  /** auto：按当前默认 provider 自动推断；manual：使用固定 baseUrl；off：关闭。 */
+  /** auto：按 provider 自动推断；manual：使用固定 baseUrl；off：关闭。 */
   mode: 'auto' | 'manual' | 'off'
   /** manual 模式的余额端点基址。 */
   baseUrl?: string
@@ -33,6 +33,16 @@ export type DetectResult = { ok: true; endpoint: BalanceEndpoint } | { ok: false
 export const DEFAULT_API_KEY_ENV = 'DEEPSEEK_API_KEY'
 const DEFAULT_BALANCE_PATH = '/user/balance'
 
+/** 已知 provider 的内置端点表：profile 不暴露 baseURL（适配器内置端点）时
+ *  也能推断余额/配额接口。key 为 llm 的 provider id；apiKeyEnv 可被
+ *  profile 中同名配置覆盖。 */
+const knownProviderEndpoints: Record<string, { baseUrl: string; path: string; apiKeyEnv: string }> = {
+  // OpenCode Zen Go（opencode.ai）：订阅制，官方配额接口 GET /v1/usage
+  'opencode-go': { baseUrl: 'https://opencode.ai/zen/go/v1', path: '/usage', apiKeyEnv: 'OPENCODE_GO_API_KEY' },
+  // DeepSeek 官方：官方余额接口 GET /user/balance
+  'deepseek': { baseUrl: 'https://api.deepseek.com', path: '/user/balance', apiKeyEnv: 'DEEPSEEK_API_KEY' },
+}
+
 function isDeepSeekHost(hostname: string): boolean {
   return hostname === 'api.deepseek.com' || hostname.endsWith('.deepseek.com')
 }
@@ -51,51 +61,26 @@ function serviceOrUndefined<T>(ctx: Context, name: string): T | undefined {
   }
 }
 
-/**
- * 按给定配置与运行时服务解析出可用的余额端点。
- * @param ctx - 插件上下文（服务读取失败按缺失处理）。
- * @param settings - 余额配置。
- * @param settingsService - 可选：调用方已捕获的 settings 服务（cordis 的
- *   ctx.inject 可选注入结果）；缺省时尝试从 ctx 安全读取。
- */
-export function detectBalanceEndpoint(
+/** 对单个 provider 推断余额端点（auto 模式共用内核）。 */
+function detectProviderEndpoint(
   ctx: Context,
-  settings: BalanceSettings,
+  provider: string,
   settingsService?: { get(ns: unknown): unknown },
 ): DetectResult {
-  if (settings.mode === 'off') return { ok: false, reason: 'disabled' }
-  if (settings.mode === 'manual') {
-    if (settings.baseUrl === undefined || settings.baseUrl === '') {
-      return { ok: false, reason: 'manual balance requires baseUrl' }
-    }
-    return {
-      ok: true,
-      endpoint: {
-        baseUrl: settings.baseUrl,
-        path: settings.path ?? DEFAULT_BALANCE_PATH,
-        apiKeyEnv: settings.apiKeyEnv ?? DEFAULT_API_KEY_ENV,
-        source: 'manual',
-      },
-    }
-  }
-
-  // auto：按当前默认 provider 推断；三个服务均可能缺失（未注入或未挂载）。
-  const agentDefaultModel = serviceOrUndefined<{ currentSelection(): { provider: string; model: string } }>(ctx, 'agentDefaultModel')
-  const selection = agentDefaultModel?.currentSelection()
-  if (selection === undefined) return { ok: false, reason: 'no default model selection' }
-  const provider = selection.provider
-
-  // 已知 provider 的内置端点表：profile 不暴露 baseURL（端点由适配器内置）时
-  // 也能推断余额/配额接口。key 仍取 profile 的 apiKeyEnv（或默认名）。
-  const knownProviderEndpoints: Record<string, { baseUrl: string; path: string; apiKeyEnv: string }> = {
-    // OpenCode Zen Go（opencode.ai）：订阅制，官方配额接口 GET /v1/usage
-    'opencode-go': { baseUrl: 'https://opencode.ai/zen/go/v1', path: '/usage', apiKeyEnv: 'OPENCODE_GO_API_KEY' },
-  }
-
   const llm = serviceOrUndefined<{ listConfigurableProviders(): Array<{ provider: string; settingsNs: string; settingsPath: readonly string[] }> }>(ctx, 'llm')
   const entries = llm?.listConfigurableProviders() ?? []
   const entry = entries.find((e) => e.provider === provider)
-  if (entry === undefined) return { ok: false, reason: `provider ${provider} not found` }
+  if (entry === undefined) {
+    // provider 未注册到 llm（适配器未挂载/列表不含）：已知端点表兜底。
+    const known = knownProviderEndpoints[provider]
+    if (known !== undefined) {
+      return {
+        ok: true,
+        endpoint: { ...known, source: `auto:${provider}` },
+      }
+    }
+    return { ok: false, reason: `provider ${provider} not found` }
+  }
 
   // 从命名空间取值，沿 settingsPath 逐层取 profile（任一层非对象即视为不可用）。
   const settingsServiceValue = settingsService
@@ -158,4 +143,78 @@ export function detectBalanceEndpoint(
     }
   }
   return { ok: false, reason: 'provider has no known balance endpoint' }
+}
+
+/**
+ * 按给定配置与运行时服务解析出当前默认 provider 的余额端点。
+ * @param ctx - 插件上下文（服务读取失败按缺失处理）。
+ * @param settings - 余额配置。
+ * @param settingsService - 可选：调用方已捕获的 settings 服务（cordis 的
+ *   ctx.inject 可选注入结果）；缺省时尝试从 ctx 安全读取。
+ */
+export function detectBalanceEndpoint(
+  ctx: Context,
+  settings: BalanceSettings,
+  settingsService?: { get(ns: unknown): unknown },
+): DetectResult {
+  if (settings.mode === 'off') return { ok: false, reason: 'disabled' }
+  if (settings.mode === 'manual') {
+    if (settings.baseUrl === undefined || settings.baseUrl === '') {
+      return { ok: false, reason: 'manual balance requires baseUrl' }
+    }
+    return {
+      ok: true,
+      endpoint: {
+        baseUrl: settings.baseUrl,
+        path: settings.path ?? DEFAULT_BALANCE_PATH,
+        apiKeyEnv: settings.apiKeyEnv ?? DEFAULT_API_KEY_ENV,
+        source: 'manual',
+      },
+    }
+  }
+
+  // auto：按当前默认 provider 推断。
+  const agentDefaultModel = serviceOrUndefined<{ currentSelection(): { provider: string; model: string } }>(ctx, 'agentDefaultModel')
+  const selection = agentDefaultModel?.currentSelection()
+  if (selection === undefined) return { ok: false, reason: 'no default model selection' }
+  return detectProviderEndpoint(ctx, selection.provider, settingsService)
+}
+
+/**
+ * 解析全部可拉取的余额/配额端点（多 provider 快照用）：
+ * - manual：仅 manual 端点（key 为 'manual'）
+ * - auto：llm 可配置 provider 全量 + 已知端点表兜底（opencode-go / deepseek），
+ *   每个 provider 独立推断，失败以 reason 记录、不影响其他 provider。
+ */
+export function detectBalanceEndpoints(
+  ctx: Context,
+  settings: BalanceSettings,
+  settingsService?: { get(ns: unknown): unknown },
+): Record<string, DetectResult> {
+  if (settings.mode === 'off') return {}
+  if (settings.mode === 'manual') {
+    if (settings.baseUrl === undefined || settings.baseUrl === '') {
+      return { manual: { ok: false, reason: 'manual balance requires baseUrl' } }
+    }
+    return {
+      manual: {
+        ok: true,
+        endpoint: {
+          baseUrl: settings.baseUrl,
+          path: settings.path ?? DEFAULT_BALANCE_PATH,
+          apiKeyEnv: settings.apiKeyEnv ?? DEFAULT_API_KEY_ENV,
+          source: 'manual',
+        },
+      },
+    }
+  }
+  // auto：llm 可配置 provider 全量 + 已知端点表兜底（适配器内置端点也纳入）。
+  const llm = serviceOrUndefined<{ listConfigurableProviders(): Array<{ provider: string; settingsNs: string; settingsPath: readonly string[] }> }>(ctx, 'llm')
+  const providers = new Set<string>(llm?.listConfigurableProviders().map((e) => e.provider) ?? [])
+  for (const key of Object.keys(knownProviderEndpoints)) providers.add(key)
+  const result: Record<string, DetectResult> = {}
+  for (const provider of providers) {
+    result[provider] = detectProviderEndpoint(ctx, provider, settingsService)
+  }
+  return result
 }

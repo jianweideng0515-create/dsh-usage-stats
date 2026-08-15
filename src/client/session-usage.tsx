@@ -105,10 +105,13 @@ export class SessionUsageController {
         this.error = String((e as Error)?.message ?? e)
         return null
       }),
-      fetchBalance(controller.signal).catch((e) => {
-        if (controller.signal.aborted) return null
-        return { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null } as BalanceResponse
-      }),
+      fetchBalance(controller.signal)
+        // 会话面板余额：优先展示默认 provider（opencode），其次 DeepSeek 兜底
+        .then((map) => map['opencode'] ?? map['deepseek'] ?? null)
+        .catch((e) => {
+          if (controller.signal.aborted) return null
+          return { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null } as BalanceResponse
+        }),
     ])
     if (controller.signal.aborted) return
     if (session !== null) {

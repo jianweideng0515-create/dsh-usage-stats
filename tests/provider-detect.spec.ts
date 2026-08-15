@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
-import { detectBalanceEndpoint } from '../src/provider-detect.ts'
+import { detectBalanceEndpoint, detectBalanceEndpoints } from '../src/provider-detect.ts'
 
 function fakeCtx(overrides: Record<string, unknown>, provider = 'opencode-go'): Context {
   return {
@@ -81,5 +81,48 @@ describe('detectBalanceEndpoint', () => {
 
   it('off 模式禁用', () => {
     expect(detectBalanceEndpoint(fakeCtx({}), { mode: 'off' }).ok).toBe(false)
+  })
+})
+
+describe('detectBalanceEndpoints', () => {
+  it('auto：llm provider + 已知表兜底（opencode-go 与 deepseek 均可检测）', () => {
+    const ctx = fakeCtx({
+      llm: { listConfigurableProviders: () => [{ provider: 'opencode-go', displayName: 'x', settingsNs: 'ns', settingsPath: [] }] },
+      settings: { get: () => undefined },
+    })
+    const map = detectBalanceEndpoints(ctx, { mode: 'auto' })
+    // opencode-go 来自 llm 列表；deepseek 不在列表时由已知表兜底
+    expect(map['opencode-go'].ok).toBe(true)
+    expect(map['deepseek'].ok).toBe(true)
+    if (map['deepseek'].ok) {
+      expect(map['deepseek'].endpoint.baseUrl).toBe('https://api.deepseek.com')
+      expect(map['deepseek'].endpoint.path).toBe('/user/balance')
+      expect(map['deepseek'].endpoint.apiKeyEnv).toBe('DEEPSEEK_API_KEY')
+      expect(map['deepseek'].endpoint.source).toBe('auto:deepseek')
+    }
+  })
+
+  it('auto：profile 配置覆盖已知表默认（apiKeyEnv/baseURL）', () => {
+    const ctx = fakeCtx({
+      llm: { listConfigurableProviders: () => [{ provider: 'deepseek', displayName: 'x', settingsNs: 'ns', settingsPath: ['providers', 'deepseek'] }] },
+      settings: { get: () => ({ providers: { deepseek: { baseURL: 'https://api.deepseek.com/v1', apiKeyEnv: 'MY_DS_KEY' } } }) },
+    })
+    const map = detectBalanceEndpoints(ctx, { mode: 'auto' })
+    expect(map['deepseek'].ok).toBe(true)
+    if (map['deepseek'].ok) {
+      expect(map['deepseek'].endpoint.baseUrl).toBe('https://api.deepseek.com')
+      expect(map['deepseek'].endpoint.path).toBe('/user/balance')
+      expect(map['deepseek'].endpoint.apiKeyEnv).toBe('MY_DS_KEY')
+    }
+  })
+
+  it('manual 模式单端点（key 为 manual）', () => {
+    const map = detectBalanceEndpoints(fakeCtx({}), { mode: 'manual', baseUrl: 'https://api.deepseek.com' })
+    expect(map.manual.ok).toBe(true)
+    if (map.manual.ok) expect(map.manual.endpoint.source).toBe('manual')
+  })
+
+  it('off 模式返回空表', () => {
+    expect(detectBalanceEndpoints(fakeCtx({}), { mode: 'off' })).toEqual({})
   })
 })
