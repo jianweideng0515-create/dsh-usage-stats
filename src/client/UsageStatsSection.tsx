@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import type { ReactElement } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { UsageStatsCard, statsShared } from './UsageStatsCard.tsx'
@@ -18,6 +18,14 @@ export function UsageStatsSection(_props: PropsRuntime<'settings.section'>): Rea
     () => shared.face.hooks.usageStatsCard.getSnapshot(),
   )
   const t = shared.t
+  // 整页常显：挂载即展开（开始轮询），默认展示最近 7 天数据，无需手动展开卡片。
+  useEffect(() => {
+    if (!shared.face.hooks.usageStatsCard.getSnapshot().expanded) {
+      shared.face.onToggleExpanded()
+    }
+    // 仅挂载时执行一次（face 为 apply 期共享实例，稳定）。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   return (
     <div className={styles.sectionPage}>
       <div className={styles.sectionHeaderRow}>
