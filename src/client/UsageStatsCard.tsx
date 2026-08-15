@@ -736,7 +736,10 @@ function QuotaTab(props: {
           <span className={`${styles.chip} ${styles.chipBlue}`}>{t('provider.prepay')}</span>
         </div>
         <div className={styles.deepseekAmount}>{balance.balance} <span className={styles.deepseekCurrency}>{balance.currency}</span></div>
-        {estDays !== null ? (
+        {balance.balance <= 0 ? (
+          // 欠费/零余额：不估算可用天数，直接提示充值
+          <div className={styles.deepseekEstimate}>{t('balance.negative')}</div>
+        ) : estDays !== null ? (
           <div className={styles.deepseekEstimate}>
             {t('balance.estimate')} {estDays} {t('balance.days')} · {t('balance.sufficient')}
           </div>

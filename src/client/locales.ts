@@ -55,6 +55,7 @@ export interface UsageStatsCopy {
   'quota.notice': string
   'quota.remaining': string
   'balance.estimate': string
+  'balance.negative': string
   'balance.days': string
   'balance.sufficient': string
   'balance.recharge': string
@@ -182,6 +183,7 @@ export const zh: UsageStatsCopy = {
   'quota.notice': '在 opencode 配置中选择「OpenCode Go」作为提供商即可自动激活限额机制。',
   'quota.remaining': '额度剩余',
   'balance.estimate': '预计可支撑约',
+  'balance.negative': '余额不足，请充值后继续使用',
   'balance.days': '天消耗',
   'balance.sufficient': '余额充足',
   'balance.recharge': '充值余额',
@@ -306,6 +308,7 @@ export const en: UsageStatsCopy = {
   'quota.notice': 'Choose "OpenCode Go" as the provider in opencode config to activate the quota mechanism.',
   'quota.remaining': 'remaining',
   'balance.estimate': 'Estimated to cover about',
+  'balance.negative': 'Insufficient balance, please recharge',
   'balance.days': 'days of usage',
   'balance.sufficient': 'Sufficient balance',
   'balance.recharge': 'Recharge',

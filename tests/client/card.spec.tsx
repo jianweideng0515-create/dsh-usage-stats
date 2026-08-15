@@ -154,6 +154,24 @@ describe('UsageStatsCard', () => {
     expect(screen.getByText(/provider does not expose an endpoint/)).toBeTruthy()
   })
 
+  it('DeepSeek 负余额显示充值提示而非可用天数', () => {
+    const t = (key: string) => key
+    render(<UsageStatsCard
+      t={t}
+      summary={summary}
+      balances={{ opencode: { balance: null, currency: '', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' }, deepseek: { balance: -0.07, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' } }}
+      loading={false}
+      error={null}
+      {...baseProps}
+    />)
+    fireEvent.click(screen.getByText('provider.deepseek'))
+    fireEvent.click(screen.getByText('tab.quota'))
+    // 负余额：显示充值提示，不出现"预计可支撑约 N 天"
+    expect(screen.getByText('balance.negative')).toBeTruthy()
+    expect(screen.queryByText(/balance\.estimate/)).toBeNull()
+    expect(screen.getByText('-0.07')).toBeTruthy()
+  })
+
   it('趋势图 hover 柱子显示按模型明细 tooltip', () => {
     const t = (key: string) => key
     const { container } = render(<UsageStatsCard
