@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import type { CSSProperties, ReactElement } from 'react'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { fetchBalance, fetchSummary, refreshBalance } from './api.ts'
@@ -1005,97 +1004,4 @@ export class UsageStatsCardController {
       onToggleExpanded: () => this.toggleExpanded(),
     }
   }
-}
-
-/** The registered card's slot namespace. */
-const CARD_NS = 'usage-stats' as const
-
-/** Slot-registered composed props: standard kit, locale seat, injected face. */
-type UsageStatsSlotProps =
-  PropsRuntime<'settings.plugin.item'>
-  & PropsLocale<typeof CARD_NS>
-  & InjectFace<UsageStatsCardFace>
-
-/** The controlled card's widened t signature (the framework t is namespace-keyed). */
-type CardTranslate = (key: string) => string
-
-/**
- * 可折叠外壳：图标 badge + 标题 + 「已激活」chip + 描述 + chevron，
- * 点击展开/收起统计内容。收起时内容不渲染（DOM 干净），controller 同步暂停轮询。
- */
-export function StatsCardShell(props: {
-  t: CardTranslate
-  title: string
-  description: string
-  expanded: boolean
-  onToggle: () => void
-  children: ReactElement | null
-}): ReactElement {
-  return (
-    <div className={styles.card}>
-      <button
-        type="button"
-        className={styles.header}
-        aria-expanded={props.expanded}
-        aria-label={props.t(props.expanded ? 'settings.collapse' : 'settings.expand')}
-        title={props.description}
-        onClick={props.onToggle}
-      >
-        <span className={styles.iconBadge} aria-hidden="true">
-          {/* 内联柱状图图标（无外部依赖、无 emoji） */}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 3v18h18" />
-            <rect x="7" y="12" width="3" height="6" rx="0.8" />
-            <rect x="13" y="8" width="3" height="10" rx="0.8" />
-            <rect x="19" y="5" width="3" height="13" rx="0.8" />
-          </svg>
-        </span>
-        <span className={styles.headText}>
-          <span className={styles.nameRow}>
-            <span className={styles.name}>{props.title}</span>
-            <span className={styles.activeBadge}>{props.t('card.active')}</span>
-          </span>
-          <span className={styles.description}>{props.description}</span>
-        </span>
-        <span className={props.expanded ? styles.chevronOpen : styles.chevron}>▾</span>
-      </button>
-      {props.expanded ? <div className={styles.body}>{props.children}</div> : null}
-    </div>
-  )
-}
-
-/**
- * Adapter that bridges the controller's injected snapshot and actions onto
- * the collapsible shell and the controlled UsageStatsCard.
- */
-export function UsageStatsSlotCard(props: UsageStatsSlotProps): ReactElement {
-  const state = props.useUsageStatsCard((s) => s)
-  const t = props.t as CardTranslate
-  return (
-    <StatsCardShell
-      t={t}
-      title={t('settings.title')}
-      description={t('settings.description')}
-      expanded={state.expanded}
-      onToggle={props.onToggleExpanded}
-    >
-      {state.expanded ? (
-        <UsageStatsCard
-          t={t}
-          summary={state.summary}
-          balance={state.balance}
-          loading={state.loading}
-          error={state.error}
-          rangeDays={state.rangeDays}
-          customFrom={state.customFrom}
-          customTo={state.customTo}
-          onRangeDays={props.onRangeDays}
-          onCustomFrom={props.onCustomFrom}
-          onCustomTo={props.onCustomTo}
-          onRefreshBalance={props.onRefreshBalance}
-          balanceRefreshing={state.balanceRefreshing}
-        />
-      ) : null}
-    </StatsCardShell>
-  )
 }

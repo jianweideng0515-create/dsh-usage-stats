@@ -5,7 +5,7 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 // Type-only: pulls the conversation SlotMap merge ('conversation.session.header.utilities').
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { UsageStatsCardController, UsageStatsSlotCard, setStatsShared } from './UsageStatsCard.tsx'
+import { UsageStatsCardController, setStatsShared } from './UsageStatsCard.tsx'
 import { UsageStatsSection } from './UsageStatsSection.tsx'
 import { SessionUsageController, SessionUsageSlotButton } from './session-usage.tsx'
 import { zh, en } from './locales.ts'
@@ -20,21 +20,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     /** usage-stats settings-card copy. */
     'usage-stats': keyof UsageStatsCopy
   }
-
-  interface SlotMap {
-    /**
-     * The plugin configuration section's card seat (ui-plugin-config),
-     * independently of any family group: usage-stats is a standalone plugin
-     * and registers its own card here instead of a family child slot.
-     */
-    'settings.plugin.item': { kind: 'list'; scope: 'root'; owner: SettingsPluginItemOwnerProps }
-  }
-}
-
-/** Owner share of a plugin card (the section supplies nothing). */
-export interface SettingsPluginItemOwnerProps {
-  /** Marker field: card owner props are intentionally empty. */
-  children?: never
 }
 
 export function apply(ctx: ClientContext): void {
@@ -42,7 +27,7 @@ export function apply(ctx: ClientContext): void {
   const bound = ctx.locale.bind(NS)
   const t = (key: string) => bound(key as keyof UsageStatsCopy)
   const controller = new UsageStatsCardController()
-  // 共享 face（section 页 + 插件卡共用同一 controller 与 store，数据一致）。
+  // 共享 face（左侧导航 Tab 与 controller 共用同一 store，数据一致）。
   setStatsShared({ face: controller.inject(), t })
 
   // 左侧导航专属 Tab（settings.section 一级入口）：不挂在「插件」分类下。
@@ -55,14 +40,6 @@ export function apply(ctx: ClientContext): void {
     label: () => t('nav.usage'),
     locale: NS,
   }, UsageStatsSection))
-
-  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
-    name: 'settings.plugin.item',
-    id: 'usage-stats',
-    order: 90,
-    locale: NS,
-    inject: () => controller.inject(),
-  }, UsageStatsSlotCard))
 
   // 会话页：右上角「用量」按钮 + 展开面板（session scope 自动注入当前会话 ID）。
   // 挂在 header.utilities（标题相邻操作组之外的右对齐工具区）而非 actions。
