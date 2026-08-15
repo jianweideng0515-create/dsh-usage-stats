@@ -63,6 +63,19 @@ describe('SessionUsageButton', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
+  it('无记录会话按钮显示 - | - 且面板给出提示', () => {
+    render(<SessionUsageButton
+      t={t}
+      state={baseState({ open: true, perSession: null })}
+      onToggle={() => {}}
+    />)
+    // 按钮：Tokens 与 Cost 均用 - 占位（不显示 0）
+    expect(screen.getAllByText('-').length).toBeGreaterThanOrEqual(2)
+    expect(screen.queryByText('0 | -')).toBeNull()
+    // 面板：无记录提示（t 直接透传 key）
+    expect(screen.getByText('session.noRecord')).toBeTruthy()
+  })
+
   it('展开时渲染 8 项会话指标', () => {
     render(<SessionUsageButton
       t={t}

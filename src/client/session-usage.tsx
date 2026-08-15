@@ -232,7 +232,8 @@ export function SessionUsageButton(props: {
   const tokensTotal = session === null
     ? 0
     : session.uncachedInputTokens + session.cacheReadTokens + session.cacheWriteTokens + session.outputTokens
-  const tokens = formatCompactTokens(tokensTotal)
+  // 无记录会话（插件计量开始前的历史会话）显示 - 占位，不显示 0 避免误读为重置。
+  const tokens = session === null ? null : formatCompactTokens(tokensTotal)
   const avgHit = session === null ? 0 : sessionHitRate(session) * 100
   const recentHit = session?.lastRequestHitRate === null || session?.lastRequestHitRate === undefined ? null : session.lastRequestHitRate * 100
   const recentTokens = session?.lastRequestTokens === null || session?.lastRequestTokens === undefined ? null : session.lastRequestTokens
@@ -297,7 +298,7 @@ export function SessionUsageButton(props: {
       >
         <PulseDot />
         <span className={styles.labelMuted}>{t('session.usageLabel')}</span>
-        <span className={styles.valHighlightTokens}>{tokens.value}{tokens.unit}</span>
+        <span className={styles.valHighlightTokens}>{tokens === null ? '-' : `${tokens.value}${tokens.unit}`}</span>
         <span className={styles.valSeparator}>|</span>
         <span className={styles.valHighlightCost}>{session === null ? '-' : formatCost(session.cost)}</span>
         <ChevronDownIcon open={state.open} />
@@ -313,6 +314,7 @@ export function SessionUsageButton(props: {
           </div>
           {state.loading && session === null ? <p className={styles.panelStatus}>{t('loading')}</p> : null}
           {state.error !== null ? <p className={styles.panelStatus}>{t('error')}: {state.error}</p> : null}
+          {!state.loading && state.error === null && session === null ? <p className={styles.panelStatus}>{t('session.noRecord')}</p> : null}
           {session !== null ? (
             <div className={styles.panelBody}>
               {/* Hero 卡：会话累计消耗（对称 2×2） */}
@@ -324,8 +326,8 @@ export function SessionUsageButton(props: {
                   <div className={styles.heroTopGrid}>
                     <div className={styles.heroCol}>
                       <div className={styles.statNumGroup}>
-                        <span className={styles.statNumber}>{tokens.value}</span>
-                        <span className={styles.statUnit}>{tokens.unit}</span>
+                        <span className={styles.statNumber}>{tokens?.value}</span>
+                        <span className={styles.statUnit}>{tokens?.unit}</span>
                       </div>
                       <div className={styles.statLabel}>{t('session.heroTokens')}</div>
                     </div>

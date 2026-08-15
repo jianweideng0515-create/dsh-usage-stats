@@ -20,6 +20,7 @@ export interface UsageStatsCopy {
   'session.copied': string
   'session.balance': string
   'session.unpricedHint': string
+  'session.noRecord': string
   'quota.monthly': string
   'quota.weekly': string
   'quota.rolling': string
@@ -112,6 +113,7 @@ export const zh: UsageStatsCopy = {
   'session.copied': '已复制',
   'session.balance': '账户余额',
   'session.unpricedHint': '* 该模型未配置单价，费用按 0 计（可在插件设置中配置价格）',
+  'session.noRecord': '该会话无用量记录（插件开始计量前的历史会话不回填）',
   'quota.monthly': '每月用量',
   'quota.weekly': '每周用量',
   'quota.rolling': '滚动用量',
@@ -201,6 +203,7 @@ export const en: UsageStatsCopy = {
   'session.copied': 'Copied',
   'session.balance': 'Account balance',
   'session.unpricedHint': '* Model has no configured price; cost counted as 0 (configure prices in plugin settings)',
+  'session.noRecord': 'No usage record for this session (history before the plugin started metering is not backfilled)',
   'quota.monthly': 'Monthly usage',
   'quota.weekly': 'Weekly usage',
   'quota.rolling': 'Rolling usage',
