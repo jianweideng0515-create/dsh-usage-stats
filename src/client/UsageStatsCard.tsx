@@ -334,7 +334,7 @@ const CARD_NS = 'usage-stats' as const
 
 /** Slot-registered composed props: standard kit, locale seat, injected face. */
 type UsageStatsSlotProps =
-  PropsRuntime<'web-ui.plugin.item'>
+  PropsRuntime<'settings.plugin.item'>
   & PropsLocale<typeof CARD_NS>
   & InjectFace<UsageStatsCardFace>
 

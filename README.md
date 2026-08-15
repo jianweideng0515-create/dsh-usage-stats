@@ -7,11 +7,17 @@ Unlike heuristic estimators, the token counts here are exact: they come from eac
 ## What it does
 
 - **Host half**: subscribes to `session/event` (global, all sessions) and folds each request into a `UsageStatsMeter`: tokens, requests, completed turns, cost, and recent-request metadata. Daily (`YYYY-MM-DD`, local timezone) and per-model buckets feed range queries. The aggregate is persisted to `~/.dsh/dsh-usage-stats.json` with debounced writes (30s) plus an immediate write on `session/flush` (throttled) and on dispose. Atomic `tmp + rename` writes keep the file safe under crash; a corrupt or version-mismatched file is moved to `.bak` and rebuilt from empty. Read-only routes under `/api/dsh-usage-stats/*` are guarded by a loopback fence so only local pages can read them. Balance is fetched from the provider's balance endpoint, auto-detected for DeepSeek or set manually.
-- **Browser half**: registers the settings-page statistics card (`web-ui.plugin.item` slot, id `usage-stats`). It offers 7/14/30/90-day plus custom range presets and shows an overview (token split and total, completed turns, requests, active days, average cache hit rate, top model, range cost, unpriced requests), a today/session digest, a CSS trend bar chart from the query series, a per-model table, and an account balance panel with manual refresh. It polls the host API every 30s while mounted.
+- **Browser half**: registers the settings-page statistics card as a standalone plugin card (official `settings.plugin.item` slot, id `usage-stats`; it is NOT part of any family group such as `web-ui.plugin.item`). It offers 7/14/30/90-day plus custom range presets and shows an overview (token split and total, completed turns, requests, active days, average cache hit rate, top model, range cost, unpriced requests), a today/session digest, a CSS trend bar chart from the query series, a per-model table, and an account balance panel with manual refresh. It polls the host API every 30s while mounted.
 
 ## Installation
 
-In-repo package: add to the personal DSH overlay (`~/.dsh/config.yaml`), hot-reloaded on save:
+Standalone plugin, independent of the dsh-web-ui family and its aggregate package. Install directly into the web profile:
+
+```sh
+dsh plugin --profile web add link:<dsh-web-ui>/packages/dsh-usage-stats
+```
+
+Then restart `dsh web`. Alternatively, add to the personal DSH overlay (`~/.dsh/config.yaml`), hot-reloaded on save:
 
 ```yaml
 - insert:
@@ -53,7 +59,7 @@ A function/namespace plugin: `inject` / `Config` / `apply`, no default export. T
 
 #### What the model sees
 
-Nothing. The plugin injects no prompt sections and registers no tools. It only consumes the durable `session/event` stream and exposes read-only HTTP routes; the browser card renders through the `web-ui.plugin.item` slot.
+Nothing. The plugin injects no prompt sections and registers no tools. It only consumes the durable `session/event` stream and exposes read-only HTTP routes; the browser card renders through the official `settings.plugin.item` slot.
 
 #### Token effect
 

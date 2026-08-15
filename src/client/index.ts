@@ -19,12 +19,11 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
   interface SlotMap {
     /**
-     * The child slot the Web UI plugin group declares; this card registers
-     * into the group instead of the top-level `settings.plugin.item` list.
-     * Spelled here with the same shape so this package can register without
-     * depending on the sibling UI package.
+     * The plugin configuration section's card seat (ui-plugin-config),
+     * independently of any family group: usage-stats is a standalone plugin
+     * and registers its own card here instead of a family child slot.
      */
-    'web-ui.plugin.item': { kind: 'list'; scope: 'root'; owner: SettingsPluginItemOwnerProps }
+    'settings.plugin.item': { kind: 'list'; scope: 'root'; owner: SettingsPluginItemOwnerProps }
   }
 }
 
@@ -37,10 +36,10 @@ export interface SettingsPluginItemOwnerProps {
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'usage-stats: dictionaries')
   const controller = new UsageStatsCardController()
-  ctx.slots.inject('web-ui.plugin.item', () => ctx.slots.register({
-    name: 'web-ui.plugin.item',
+  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
+    name: 'settings.plugin.item',
     id: 'usage-stats',
-    order: 120,
+    order: 90,
     locale: NS,
     inject: () => controller.inject(),
   }, UsageStatsSlotCard))
