@@ -158,5 +158,25 @@ describe('SessionUsageController 切换会话', () => {
     expect(fetchSessionUsageMock.mock.calls.some((c) => c[0] === 's-c')).toBe(true)
     fetchSessionUsageMock.mockClear()
   })
+
+  it('切回原会话时 rebind 重新拉取（框架 inject 缓存不调用时的兜底）', async () => {
+    mockSessionResponses.set('s-a', { ...session, sessionId: 's-a', turns: 1, lastTurnTokens: 100 })
+    mockSessionResponses.set('s-b', { ...session, sessionId: 's-b', turns: 9, lastTurnTokens: 900 })
+    const { fetchSessionUsage } = await import('../../src/client/api.ts')
+    const fetchSessionUsageMock = fetchSessionUsage as unknown as ReturnType<typeof vi.fn>
+    fetchSessionUsageMock.mockClear()
+    const controller = new SessionUsageController()
+    const faceA = controller.inject('s-a') // 首次绑定 A
+    await new Promise((r) => setTimeout(r, 20))
+    controller.inject('s-b') // 切到 B（框架对新会话调用 inject）
+    await new Promise((r) => setTimeout(r, 20))
+    faceA.rebind('s-a') // 框架缓存命中不再调用 inject，组件层 rebind 切回 A
+    await new Promise((r) => setTimeout(r, 20))
+    const snapshot = faceA.hooks.sessionUsage.get()
+    expect(snapshot.perSession?.sessionId).toBe('s-a')
+    expect(snapshot.perSession?.turns).toBe(1)
+    expect(fetchSessionUsageMock.mock.calls.some((c) => c[0] === 's-a')).toBe(true)
+    fetchSessionUsageMock.mockClear()
+  })
 })
 

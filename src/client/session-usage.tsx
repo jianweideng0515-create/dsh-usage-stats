@@ -30,6 +30,12 @@ export interface SessionUsageFace {
     sessionUsage: SnapshotStore<SessionUsageStore>
   }
   onToggle: () => void
+  /**
+   * 重新绑定会话：框架对每个会话的 inject face 做 identity 缓存，
+   * 切回原会话时 inject 不再被调用，组件层需在 sessionId 变化时
+   * 主动 rebind（否则 controller 停留在上一个会话）。
+   */
+  rebind: (sessionId: string) => void
 }
 
 const REFRESH_INTERVAL_MS = 30_000
@@ -129,7 +135,9 @@ export class SessionUsageController {
   }
 
   /**
-   * session scope 注入：框架在每次会话渲染时传入当前会话 ID。
+   * session scope 注入：框架对每个会话的 inject face 做 identity 缓存
+   * （provide bundle 稳定，切回原会话时不再调用 inject），所以会话切换
+   * 的实时性由组件层 rebind 保证；这里仅处理首次绑定与切换时的拉取。
    * 会话绑定/切换时立即清空旧数据并拉取一次（不依赖面板是否打开）：
    * 按钮上始终显示当前会话用量，重启/刷新后不会停留在 0。
    * 面板打开时另有 30s 轮询。
@@ -145,6 +153,15 @@ export class SessionUsageController {
     return {
       hooks: { sessionUsage: this.store },
       onToggle: () => this.toggle(),
+      rebind: (nextSessionId) => {
+        if (nextSessionId !== this.sessionId) {
+          this.sessionId = nextSessionId
+          this.perSession = null
+          this.error = null
+          void this.poll()
+          this.publish()
+        }
+      },
     }
   }
 }
@@ -421,5 +438,12 @@ type SessionUsageSlotProps =
 export function SessionUsageSlotButton(props: SessionUsageSlotProps): ReactElement {
   const state = props.useSessionUsage((s) => s)
   const t = props.t as (key: string) => string
+  // 框架对 session scope 的 inject face 做 identity 缓存（provide bundle 稳定），
+  // 切回原会话时 inject 不再被调用；但会话切换会以 key={sessionId} 重新挂载
+  // 本组件，sessionId 变化时主动 rebind，保证按钮跟随当前会话。
+  const sessionId = props.sessionId
+  useEffect(() => {
+    props.rebind(sessionId)
+  }, [sessionId])
   return <SessionUsageButton t={t} state={state} onToggle={props.onToggle} />
 }
