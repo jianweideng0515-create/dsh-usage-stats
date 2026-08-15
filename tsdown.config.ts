@@ -1,4 +1,5 @@
-import { clientBundle } from '../../shared/tsdown.client.ts'
+// 构建预设：独立仓库内联的共享副本（源自 dsh-web-ui/shared/tsdown.client.ts）
+import { clientBundle } from './tsdown.client.ts'
 
 export default clientBundle(
   '@deepseek-ai/dsh-usage-stats',
