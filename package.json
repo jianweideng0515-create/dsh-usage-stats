@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-usage-stats",
+  "name": "@abcdefu_cja/dsh-usage-stats",
   "description": "DSH API 用量统计：token、请求、轮次、缓存命中、费用估算与多提供商余额/配额。",
   "version": "0.1.0",
   "type": "module",

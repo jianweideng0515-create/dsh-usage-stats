@@ -1,4 +1,4 @@
-# @deepseek-ai/dsh-usage-stats
+# @abcdefu_cja/dsh-usage-stats
 
 DSH Web 的 API 用量统计插件：精确统计 token、请求、完成轮次、活跃天数、缓存命中率、费用估算，并同时拉取 OpenCode 订阅配额与 DeepSeek 官方余额。以独立插件形态挂载（不属于 dsh-web-ui 家族），在设置页左侧导航提供专属「用量统计」Tab。
 
@@ -28,8 +28,8 @@ DSH Web 的 API 用量统计插件：精确统计 token、请求、完成轮次�
 **方式一：npm（发布后）**
 
 ```sh
-npm i @deepseek-ai/dsh-usage-stats
-dsh plugin --profile web add @deepseek-ai/dsh-usage-stats
+npm i @abcdefu_cja/dsh-usage-stats
+dsh plugin --profile web add @abcdefu_cja/dsh-usage-stats
 ```
 
 **方式二：本地 link（开发）**
@@ -43,7 +43,7 @@ dsh plugin --profile web add link:/path/to/dsh-usage-stats
 ```yaml
 - insert:
     - id: usage-stats
-      name: '@deepseek-ai/dsh-usage-stats'
+      name: '@abcdefu_cja/dsh-usage-stats'
       config:
         enabled: true
         currency: CNY

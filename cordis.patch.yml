@@ -2,4 +2,4 @@
 # roster. The bundle is the official dsh plugin shape.
 - insert:
     - id: usage-stats
-      name: '@deepseek-ai/dsh-usage-stats'
+      name: '@abcdefu_cja/dsh-usage-stats'

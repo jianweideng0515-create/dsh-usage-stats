@@ -2,7 +2,7 @@
 import { clientBundle } from './tsdown.client.ts'
 
 export default clientBundle(
-  '@deepseek-ai/dsh-usage-stats',
+  '@abcdefu_cja/dsh-usage-stats',
   ['src/index.ts'],
   {
     lib: {
