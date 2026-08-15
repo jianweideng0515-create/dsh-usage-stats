@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
 import { detectBalanceEndpoint } from '../src/provider-detect.ts'
 
-function fakeCtx(overrides: Record<string, unknown>): Context {
+function fakeCtx(overrides: Record<string, unknown>, provider = 'opencode-go'): Context {
   return {
-    agentDefaultModel: { currentSelection: () => ({ provider: 'opencode-go', model: 'deepseek-v4-flash' }) },
+    agentDefaultModel: { currentSelection: () => ({ provider, model: 'deepseek-v4-flash' }) },
     llm: { listConfigurableProviders: () => [] },
     settings: { get: () => undefined },
     ...overrides,
@@ -44,11 +44,36 @@ describe('detectBalanceEndpoint', () => {
     if (!r.ok) expect(r.reason).toContain('no known balance endpoint')
   })
 
-  it('auto：无 baseURL 不可推断', () => {
+  it('auto：opencode-go 无 baseURL 走已知端点表（/v1/usage）', () => {
     const ctx = fakeCtx({
       llm: { listConfigurableProviders: () => [{ provider: 'opencode-go', displayName: 'x', settingsNs: 'llm-pi-ai', settingsPath: ['providers', 'opencode-go'] }] },
       settings: { get: () => ({ providers: { 'opencode-go': { apiKeyEnv: 'OPENCODE_GO_API_KEY' } } }) },
     })
+    const r = detectBalanceEndpoint(ctx, { mode: 'auto' })
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.endpoint.baseUrl).toBe('https://opencode.ai/zen/go/v1')
+      expect(r.endpoint.path).toBe('/usage')
+      expect(r.endpoint.apiKeyEnv).toBe('OPENCODE_GO_API_KEY')
+      expect(r.endpoint.source).toBe('auto:opencode-go')
+    }
+  })
+
+  it('auto：opencode.ai 主机 baseURL 推断 /usage', () => {
+    const ctx = fakeCtx({
+      llm: { listConfigurableProviders: () => [{ provider: 'opencode-go', displayName: 'x', settingsNs: 'ns', settingsPath: [] }] },
+      settings: { get: () => ({ baseURL: 'https://opencode.ai/zen/go/v1' }) },
+    })
+    const r = detectBalanceEndpoint(ctx, { mode: 'auto' })
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.endpoint.path).toBe('/usage')
+  })
+
+  it('auto：未知 provider 无 baseURL 不可推断', () => {
+    const ctx = fakeCtx({
+      llm: { listConfigurableProviders: () => [{ provider: 'mystery-provider', displayName: 'x', settingsNs: 'ns', settingsPath: [] }] },
+      settings: { get: () => ({ apiKeyEnv: 'X_KEY' }) },
+    }, 'mystery-provider')
     const r = detectBalanceEndpoint(ctx, { mode: 'auto' })
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.reason).toContain('does not expose')

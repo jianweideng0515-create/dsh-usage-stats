@@ -20,6 +20,9 @@ export interface UsageStatsCopy {
   'session.copied': string
   'session.balance': string
   'session.unpricedHint': string
+  'quota.monthly': string
+  'quota.weekly': string
+  'quota.rolling': string
   'range.last7': string
   'range.last14': string
   'range.last30': string
@@ -104,6 +107,9 @@ export const zh: UsageStatsCopy = {
   'session.copied': '已复制',
   'session.balance': '账户余额',
   'session.unpricedHint': '* 该模型未配置单价，费用按 0 计（可在插件设置中配置价格）',
+  'quota.monthly': '月额度已用',
+  'quota.weekly': '周额度已用',
+  'quota.rolling': '滚动额度已用',
   'range.last7': '最近 7 天',
   'range.last14': '最近 14 天',
   'range.last30': '最近 30 天',
@@ -185,6 +191,9 @@ export const en: UsageStatsCopy = {
   'session.copied': 'Copied',
   'session.balance': 'Account balance',
   'session.unpricedHint': '* Model has no configured price; cost counted as 0 (configure prices in plugin settings)',
+  'quota.monthly': 'Monthly quota used',
+  'quota.weekly': 'Weekly quota used',
+  'quota.rolling': 'Rolling quota used',
   'range.last7': 'Last 7 days',
   'range.last14': 'Last 14 days',
   'range.last30': 'Last 30 days',

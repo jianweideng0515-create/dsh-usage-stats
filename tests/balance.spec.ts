@@ -49,4 +49,31 @@ describe('BalanceClient', () => {
     const s = await c.refresh()
     expect(s.error).toContain('401')
   })
+
+  it('OpenCode /v1/usage 解析为配额快照（优先月度窗口）', async () => {
+    const c = client({
+      fetchFn: (async () => resp({
+        usage: {
+          rolling: { status: 'ok', percent: 0, resetsAt: '2026-08-15T18:20:44.411Z' },
+          weekly: { status: 'ok', percent: 42, resetsAt: '2026-08-17T00:00:00.411Z' },
+          monthly: { status: 'ok', percent: 21, resetsAt: '2026-09-14T14:21:59.411Z' },
+        },
+      })) as typeof fetch,
+    })
+    c.setDetect(() => ({ ok: true, endpoint: { baseUrl: 'https://opencode.ai/zen/go/v1', path: '/usage', apiKeyEnv: 'OPENCODE_GO_API_KEY', source: 'auto:opencode-go' } }))
+    const s = await c.refresh()
+    expect(s.error).toBeNull()
+    expect(s.balance).toBeNull()
+    expect(s.quota).not.toBeNull()
+    expect(s.quota?.window).toBe('monthly')
+    expect(s.quota?.percent).toBe(21)
+    expect(s.quota?.resetsAt).toContain('2026-09-14')
+  })
+
+  it('OpenCode 格式缺失时按 unexpected response 处理', async () => {
+    const c = client({ fetchFn: (async () => resp({ hello: 'world' })) as typeof fetch })
+    c.setDetect(() => ({ ok: true, endpoint: { baseUrl: 'https://opencode.ai/zen/go/v1', path: '/usage', apiKeyEnv: 'K', source: 'auto:opencode-go' } }))
+    const s = await c.refresh()
+    expect(s.error).toBe('unexpected response')
+  })
 })

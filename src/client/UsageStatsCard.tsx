@@ -301,7 +301,13 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
       ) : null}
       <div className={styles.balance}>
         <h4 className={styles.heading}>{t('balance.title')}</h4>
-        {balance === null ? <p className={styles.status}>{t('loading')}</p> : balance.balance === null ? (
+        {balance === null ? <p className={styles.status}>{t('loading')}</p> : balance.quota !== null && balance.quota !== undefined ? (
+          <p>
+            {t('quota.' + balance.quota.window)}: {balance.quota.percent}%
+            {balance.updatedAt !== null ? ` (${t('balance.updated')}: ${new Date(balance.updatedAt).toLocaleString()})` : ''}
+            {balance.source !== null ? ` (${t('balance.source')}: ${balance.source.source})` : ''}
+          </p>
+        ) : balance.balance === null ? (
           <p className={styles.status}>{t('balance.unavailable')}{balance.error !== null ? `: ${balance.error}` : ''}</p>
         ) : (
           <p>
@@ -475,7 +481,7 @@ export class UsageStatsCardController {
     try {
       this.balance = await fetchBalance()
     } catch (e) {
-      this.balance = { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null }
+      this.balance = { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null, quota: null }
     }
     this.publish()
   }
@@ -504,7 +510,7 @@ export class UsageStatsCardController {
           try {
             this.balance = await refreshBalance()
           } catch (e) {
-            this.balance = { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null }
+            this.balance = { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null, quota: null }
           }
           this.balanceRefreshing = false
           this.publish()

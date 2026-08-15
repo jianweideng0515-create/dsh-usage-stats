@@ -57,12 +57,20 @@ export interface SummaryResponse {
   perSession: PerSession | null
 }
 
+export interface UsageQuota {
+  percent: number
+  window: 'rolling' | 'weekly' | 'monthly'
+  resetsAt: string | null
+}
+
 export interface BalanceResponse {
   balance: number | null
   currency: string
   updatedAt: string | null
   error: string | null
   source: { baseUrl: string; path: string; apiKeyEnv: string; source: string } | null
+  /** OpenCode 等订阅制配额；金额型（DeepSeek）为 null。 */
+  quota: UsageQuota | null
 }
 
 /** 拉取区间汇总（不带 sessionId：纯区间总量，perSession 恒 null）。 */

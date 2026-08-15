@@ -238,6 +238,10 @@ export function SessionUsageButton(props: {
   const balance = state.balance
   // 有真实消耗但费用为 0：模型未配置单价（内置价格表外），费用按 0 计。
   const unpriced = session !== null && session.cost === 0 && tokensTotal > 0
+  // 订阅制配额（opencode-go /v1/usage）与金额（DeepSeek /user/balance）二选一展示。
+  const quotaLabel = balance?.quota === null || balance?.quota === undefined ? null
+    : balance.quota.window === 'monthly' ? t('quota.monthly')
+      : balance.quota.window === 'weekly' ? t('quota.weekly') : t('quota.rolling')
 
   const handleCopySummary = (): void => {
     const sessionText = session === null ? '' : `Tokens: ${tokensTotal} | Cost: ${session.cost.toFixed(4)}`
@@ -347,13 +351,15 @@ export function SessionUsageButton(props: {
               </div>
             </div>
           ) : null}
-          {/* Footer：账户余额 + 复制摘要 */}
+          {/* Footer：账户余额/配额 + 复制摘要 */}
           <div className={styles.panelFooter}>
             <div className={styles.footerFlex}>
               <span className={styles.balanceText}>
-                {t('session.balance')}: <strong className={styles.balanceVal}>{balance === null ? '-' : balance.balance === null
-                  ? (balance.error ?? t('balance.unavailable'))
-                  : `${balance.balance} ${balance.currency}`}</strong>
+                {t('session.balance')}: <strong className={styles.balanceVal}>{balance === null ? '-' : balance.quota !== null && balance.quota !== undefined
+                  ? `${quotaLabel} ${balance.quota.percent}%`
+                  : balance.balance === null
+                    ? (balance.error ?? t('balance.unavailable'))
+                    : `${balance.balance} ${balance.currency}`}</strong>
               </span>
               <button type="button" onClick={handleCopySummary} className={`${styles.btnCopy} ${copied ? styles.btnCopyCopied : ''}`}>
                 {copied ? <CheckIcon /> : <CopyIcon />}

@@ -41,7 +41,7 @@ describe('SessionUsageButton', () => {
       state={baseState({
         open: true,
         perSession: session,
-        balance: { balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null },
+        balance: { balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null },
       })}
       onToggle={() => {}}
     />)
@@ -70,7 +70,7 @@ describe('SessionUsageButton', () => {
       state={baseState({
         open: true,
         perSession: session,
-        balance: { balance: null, currency: 'CNY', updatedAt: null, error: 'provider does not expose an endpoint', source: null },
+        balance: { balance: null, currency: 'CNY', updatedAt: null, error: 'provider does not expose an endpoint', source: null, quota: null },
       })}
       onToggle={() => {}}
     />)
@@ -84,3 +84,4 @@ describe('SessionUsageButton', () => {
     expect(onToggle).toHaveBeenCalledTimes(1)
   })
 })
+

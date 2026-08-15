@@ -84,6 +84,14 @@ export function detectBalanceEndpoint(
   const selection = agentDefaultModel?.currentSelection()
   if (selection === undefined) return { ok: false, reason: 'no default model selection' }
   const provider = selection.provider
+
+  // 已知 provider 的内置端点表：profile 不暴露 baseURL（端点由适配器内置）时
+  // 也能推断余额/配额接口。key 仍取 profile 的 apiKeyEnv（或默认名）。
+  const knownProviderEndpoints: Record<string, { baseUrl: string; path: string; apiKeyEnv: string }> = {
+    // OpenCode Zen Go（opencode.ai）：订阅制，官方配额接口 GET /v1/usage
+    'opencode-go': { baseUrl: 'https://opencode.ai/zen/go/v1', path: '/usage', apiKeyEnv: 'OPENCODE_GO_API_KEY' },
+  }
+
   const llm = serviceOrUndefined<{ listConfigurableProviders(): Array<{ provider: string; settingsNs: string; settingsPath: readonly string[] }> }>(ctx, 'llm')
   const entries = llm?.listConfigurableProviders() ?? []
   const entry = entries.find((e) => e.provider === provider)
@@ -98,28 +106,56 @@ export function detectBalanceEndpoint(
     if (typeof profile !== 'object' || profile === null) { profile = undefined; break }
     profile = (profile as Record<string, unknown>)[key]
   }
-  if (typeof profile !== 'object' || profile === null) return { ok: false, reason: 'provider profile unavailable' }
-  const record = profile as Record<string, unknown>
+  const record = (typeof profile === 'object' && profile !== null ? profile : {}) as Record<string, unknown>
   const baseURL = typeof record.baseURL === 'string' ? record.baseURL
     : typeof record.baseUrl === 'string' ? record.baseUrl : undefined
   const apiKeyEnv = typeof record.apiKeyEnv === 'string' ? record.apiKeyEnv : undefined
 
-  if (baseURL === undefined) return { ok: false, reason: 'provider does not expose an endpoint' }
+  // profile 无 baseURL（适配器内置端点）时查已知 provider 表。
+  if (baseURL === undefined) {
+    const known = knownProviderEndpoints[provider]
+    if (known !== undefined) {
+      return {
+        ok: true,
+        endpoint: {
+          baseUrl: known.baseUrl,
+          path: known.path,
+          apiKeyEnv: apiKeyEnv ?? known.apiKeyEnv,
+          source: `auto:${provider}`,
+        },
+      }
+    }
+    return { ok: false, reason: 'provider does not expose an endpoint' }
+  }
   let hostname: string
   try {
     hostname = new URL(baseURL).hostname
   } catch {
     return { ok: false, reason: 'provider endpoint is not a valid URL' }
   }
-  if (!isDeepSeekHost(hostname)) return { ok: false, reason: 'provider has no known balance endpoint' }
-  const origin = new URL(baseURL).origin
-  return {
-    ok: true,
-    endpoint: {
-      baseUrl: origin,
-      path: DEFAULT_BALANCE_PATH,
-      apiKeyEnv: apiKeyEnv ?? DEFAULT_API_KEY_ENV,
-      source: `auto:${provider}`,
-    },
+  if (isDeepSeekHost(hostname)) {
+    const origin = new URL(baseURL).origin
+    return {
+      ok: true,
+      endpoint: {
+        baseUrl: origin,
+        path: DEFAULT_BALANCE_PATH,
+        apiKeyEnv: apiKeyEnv ?? DEFAULT_API_KEY_ENV,
+        source: `auto:${provider}`,
+      },
+    }
   }
+  if (hostname === 'opencode.ai' || hostname.endsWith('.opencode.ai')) {
+    const origin = new URL(baseURL).origin
+    return {
+      ok: true,
+      endpoint: {
+        baseUrl: origin,
+        path: '/usage',
+        apiKeyEnv: apiKeyEnv ?? 'OPENCODE_GO_API_KEY',
+        source: `auto:${provider}`,
+      },
+    }
+  }
+  return { ok: false, reason: 'provider has no known balance endpoint' }
 }

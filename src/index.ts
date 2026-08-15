@@ -1,4 +1,5 @@
 import { homedir } from 'node:os'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
@@ -13,6 +14,25 @@ import { makeRoutes } from './routes.ts'
 import { BalanceClient } from './balance.ts'
 import type { BalanceSettings } from './provider-detect.ts'
 import { detectBalanceEndpoint } from './provider-detect.ts'
+
+/**
+ * 读取 DSH 凭据文件（~/.dsh/.credentials.yaml，形如 "KEY: value" 行）。
+ * 失败/缺失返回空对象；结果缓存（凭据变更需重启）。
+ */
+function readCredentialsFile(): Record<string, string> {
+  const file = join(homedir(), '.dsh', '.credentials.yaml')
+  if (!existsSync(file)) return {}
+  try {
+    const entries: Record<string, string> = {}
+    for (const line of readFileSync(file, 'utf8').split('\n')) {
+      const match = /^([A-Za-z0-9_]+)\s*:\s*(.+)$/.exec(line.trim())
+      if (match !== null) entries[match[1]] = match[2].trim().replace(/^["']|["']$/g, '')
+    }
+    return entries
+  } catch {
+    return {}
+  }
+}
 
 export const name = 'usage-stats'
 
@@ -106,7 +126,9 @@ export function apply(ctx: Context, config: Config = {}): void {
   })
   const balance = new BalanceClient({
     fetchFn: fetch,
-    getEnv: (name) => process.env[name],
+    // key 优先进程环境变量，其次 DSH 凭据文件（~/.dsh/.credentials.yaml，
+    // 形如 "KEY: value" 行）——DSH 的 key 通常存在凭据文件而非环境变量。
+    getEnv: (name) => process.env[name] ?? readCredentialsFile()[name],
   })
   const syncBalance = (): void => {
     const value = resolve().balance ?? { mode: 'auto' }

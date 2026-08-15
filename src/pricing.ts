@@ -19,10 +19,32 @@ export interface PriceConfig {
   currency?: string
 }
 
-/** DeepSeek 内置价格表（每百万 token，单位为美元）。 */
+/**
+ * 内置价格表（每百万 token）。DeepSeek 官方价按 CNY；OpenCode Zen Go
+ * （opencode-go provider）价格取自 pi-ai 官方 catalog（USD 口径）。
+ * 货币标签以插件设置 currency 为准；混用两套计价时费用为估算值。
+ */
 export const DEFAULT_DEEPSEEK_PRICES: Record<string, ModelPrice> = {
+  // DeepSeek 官方（CNY）
   'deepseek-chat': { input: 2, cacheRead: 0.5, cacheWrite: 2, output: 8 },
   'deepseek-reasoner': { input: 4, cacheRead: 1, cacheWrite: 4, output: 16 },
+  // OpenCode Zen Go（USD，来源 pi-ai catalog data/opencode-go.json）
+  'deepseek-v4-flash': { input: 0.14, cacheRead: 0.0028, cacheWrite: 0, output: 0.28 },
+  'deepseek-v4-pro': { input: 0.435, cacheRead: 0.003625, cacheWrite: 0, output: 0.87 },
+  'glm-5.1': { input: 1.4, cacheRead: 0.26, cacheWrite: 0, output: 4.4 },
+  'glm-5.2': { input: 1.4, cacheRead: 0.26, cacheWrite: 0, output: 4.4 },
+  'hy3': { input: 0.14, cacheRead: 0.035, cacheWrite: 0, output: 0.58 },
+  'kimi-k2.6': { input: 0.95, cacheRead: 0.16, cacheWrite: 0, output: 4 },
+  'kimi-k2.7-code': { input: 0.95, cacheRead: 0.19, cacheWrite: 0, output: 4 },
+  'kimi-k3': { input: 3, cacheRead: 0.3, cacheWrite: 0, output: 15 },
+  'mimo-v2.5': { input: 0.14, cacheRead: 0.0028, cacheWrite: 0, output: 0.28 },
+  'mimo-v2.5-pro': { input: 0.435, cacheRead: 0.003625, cacheWrite: 0, output: 0.87 },
+  'minimax-m2.7': { input: 0.3, cacheRead: 0.06, cacheWrite: 0, output: 1.2 },
+  'minimax-m3': { input: 0.3, cacheRead: 0.06, cacheWrite: 0, output: 1.2 },
+  'qwen3.6-plus': { input: 0.5, cacheRead: 0.05, cacheWrite: 0.625, output: 3 },
+  'qwen3.7-max': { input: 2.5, cacheRead: 0.5, cacheWrite: 3.125, output: 7.5 },
+  'qwen3.7-plus': { input: 0.4, cacheRead: 0.04, cacheWrite: 0.5, output: 1.6 },
+  'grok-4.5': { input: 2, cacheRead: 0.5, cacheWrite: 0, output: 6 },
 }
 
 /**

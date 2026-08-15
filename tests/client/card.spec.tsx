@@ -46,7 +46,7 @@ describe('UsageStatsCard', () => {
     render(<UsageStatsCard
       t={t}
       summary={summary}
-      balance={{ balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null }}
+      balance={{ balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null }}
       loading={false}
       error={null}
       {...baseProps}
@@ -62,7 +62,7 @@ describe('UsageStatsCard', () => {
     render(<UsageStatsCard
       t={t}
       summary={{ ...summary, avgCacheHitRate: 0.9984 }}
-      balance={{ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null }}
+      balance={{ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null }}
       loading={false}
       error={null}
       {...baseProps}
@@ -77,7 +77,7 @@ describe('UsageStatsCard', () => {
     render(<UsageStatsCard
       t={t}
       summary={summary}
-      balance={{ balance: null, currency: 'CNY', updatedAt: null, error: 'provider does not expose an endpoint', source: null }}
+      balance={{ balance: null, currency: 'CNY', updatedAt: null, error: 'provider does not expose an endpoint', source: null, quota: null }}
       loading={false}
       error={null}
       {...baseProps}
@@ -112,3 +112,4 @@ describe('StatsCardShell', () => {
     expect(screen.getByRole('button', { expanded: true })).toBeTruthy()
   })
 })
+

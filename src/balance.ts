@@ -1,12 +1,24 @@
 import type { BalanceEndpoint, BalanceSettings, DetectResult } from './provider-detect.ts'
 
-/** 一次余额快照（路由响应形状）。 */
+/** OpenCode 订阅配额快照（/v1/usage 的三个窗口之一；优先展示月度）。 */
+export interface UsageQuota {
+  /** 已用百分比 0-100。 */
+  percent: number
+  /** 配额窗口。 */
+  window: 'rolling' | 'weekly' | 'monthly'
+  /** 重置时间（ISO）；接口未提供时为 null。 */
+  resetsAt: string | null
+}
+
+/** 一次余额快照（路由响应形状）。金额与配额二选一：有 quota 时为订阅制。 */
 export interface BalanceSnapshot {
   balance: number | null
   currency: string
   updatedAt: string | null
   error: string | null
   source: BalanceEndpoint | null
+  /** OpenCode 等订阅制的配额百分比；金额型（DeepSeek）为 null。 */
+  quota: UsageQuota | null
 }
 
 /** 余额客户端的运行时依赖（测试可注入）。 */
@@ -21,6 +33,7 @@ const FAIL = (error: string, source: BalanceEndpoint | null): BalanceSnapshot =>
   updatedAt: null,
   error,
   source,
+  quota: null,
 })
 
 /** 解析 DeepSeek 兼容余额响应；格式不符返回 null。 */
@@ -39,10 +52,33 @@ export function parseBalanceResponse(body: unknown): { balance: number; currency
   return { balance, currency }
 }
 
+/**
+ * 解析 OpenCode 订阅配额响应（GET /v1/usage → { usage: { rolling/weekly/monthly:
+ * { status, percent, resetsAt } } }）。优先月度窗口，其次周/滚动。
+ * 格式不符返回 null。
+ */
+export function parseOpenCodeUsage(body: unknown): UsageQuota | null {
+  if (typeof body !== 'object' || body === null) return null
+  const usage = (body as { usage?: unknown }).usage
+  if (typeof usage !== 'object' || usage === null) return null
+  const record = usage as Record<string, unknown>
+  for (const window of ['monthly', 'weekly', 'rolling'] as const) {
+    const entry = record[window]
+    if (typeof entry !== 'object' || entry === null) continue
+    const percent = (entry as { percent?: unknown }).percent
+    const numeric = typeof percent === 'number' ? percent : typeof percent === 'string' ? Number(percent) : NaN
+    if (!Number.isFinite(numeric)) continue
+    const resetsAt = typeof (entry as { resetsAt?: unknown }).resetsAt === 'string'
+      ? (entry as { resetsAt: string }).resetsAt : null
+    return { percent: numeric, window, resetsAt }
+  }
+  return null
+}
+
 export class BalanceClient {
   private settings: BalanceSettings = { mode: 'off' }
   private detect: () => DetectResult = () => ({ ok: false, reason: 'disabled' })
-  private last: BalanceSnapshot = { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null }
+  private last: BalanceSnapshot = { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null }
 
   constructor(private readonly deps: BalanceClientDeps) {}
 
@@ -85,6 +121,23 @@ export class BalanceClient {
       this.last = FAIL('unexpected response', endpoint)
       return this.last
     }
+    // 端点按路径区分：/usage 为 OpenCode 配额，/user/balance 为 DeepSeek 金额。
+    if (endpoint.path.includes('/usage')) {
+      const quota = parseOpenCodeUsage(body)
+      if (quota === null) {
+        this.last = FAIL('unexpected response', endpoint)
+        return this.last
+      }
+      this.last = {
+        balance: null,
+        currency: '',
+        updatedAt: new Date().toISOString(),
+        error: null,
+        source: endpoint,
+        quota,
+      }
+      return this.last
+    }
     const parsed = parseBalanceResponse(body)
     if (parsed === null) {
       this.last = FAIL('unexpected response', endpoint)
@@ -96,6 +149,7 @@ export class BalanceClient {
       updatedAt: new Date().toISOString(),
       error: null,
       source: endpoint,
+      quota: null,
     }
     return this.last
   }
