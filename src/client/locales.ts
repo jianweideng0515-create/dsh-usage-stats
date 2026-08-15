@@ -4,6 +4,7 @@ export interface UsageStatsCopy {
   'settings.description': string
   'settings.enabled': string
   'settings.enabledHint': string
+  'session.usage': string
   'range.last7': string
   'range.last14': string
   'range.last30': string
@@ -72,6 +73,7 @@ export const zh: UsageStatsCopy = {
   'settings.description': 'Token、请求、轮次、缓存命中、费用估算与余额。',
   'settings.enabled': '启用用量统计',
   'settings.enabledHint': '关闭后停止统计与余额刷新。',
+  'session.usage': '用量',
   'range.last7': '最近 7 天',
   'range.last14': '最近 14 天',
   'range.last30': '最近 30 天',
@@ -137,6 +139,7 @@ export const en: UsageStatsCopy = {
   'settings.description': 'Tokens, requests, turns, cache hits, cost estimates and balance.',
   'settings.enabled': 'Enable usage stats',
   'settings.enabledHint': 'When off, tracking and balance refresh stop.',
+  'session.usage': 'Usage',
   'range.last7': 'Last 7 days',
   'range.last14': 'Last 14 days',
   'range.last30': 'Last 30 days',

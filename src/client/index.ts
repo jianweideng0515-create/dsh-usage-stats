@@ -3,7 +3,10 @@ import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: pulls the settings-surface SlotMap merge and ctx.settingsScope.
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+// Type-only: pulls the conversation SlotMap merge ('conversation.session.header.actions').
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { UsageStatsCardController, UsageStatsSlotCard } from './UsageStatsCard.tsx'
+import { SessionUsageController, SessionUsageSlotButton } from './session-usage.tsx'
 import { zh, en } from './locales.ts'
 import type { UsageStatsCopy } from './locales.ts'
 
@@ -43,4 +46,14 @@ export function apply(ctx: ClientContext): void {
     locale: NS,
     inject: () => controller.inject(),
   }, UsageStatsSlotCard))
+
+  // 会话页：头部「用量」按钮 + 展开面板（session scope 自动注入当前会话 ID）。
+  const sessionController = new SessionUsageController()
+  ctx.slots.inject('conversation.session.header.actions', () => ctx.slots.register({
+    name: 'conversation.session.header.actions',
+    id: 'usage-stats-session',
+    order: 20,
+    locale: NS,
+    inject: (sessionId) => sessionController.inject(sessionId),
+  }, SessionUsageSlotButton))
 }

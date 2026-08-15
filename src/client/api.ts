@@ -28,6 +28,11 @@ export interface PerSession {
   turns: number
   requests: number
   cost: number
+  /** 会话级 token 分项（会话页用量展示）。 */
+  uncachedInputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  outputTokens: number
   lastRequestAt: string | null
   lastModel: string | null
   lastRequestCost: number | null
@@ -58,12 +63,21 @@ export interface BalanceResponse {
   source: { baseUrl: string; path: string; apiKeyEnv: string; source: string } | null
 }
 
-/** 拉取区间汇总；sessionId 缺省取宿主“最近活跃会话”。 */
+/** 拉取区间汇总（不带 sessionId：纯区间总量，perSession 恒 null）。 */
 export async function fetchSummary(from: string, to: string, signal?: AbortSignal): Promise<SummaryResponse> {
   const url = `/api/dsh-usage-stats/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
   const response = await fetch(url, { signal })
   if (!response.ok) throw new Error(`summary HTTP ${response.status}`)
   return response.json() as Promise<SummaryResponse>
+}
+
+/** 拉取指定会话的用量明细（会话页用量面板用；区间字段无意义，取今日兜底）。 */
+export async function fetchSessionUsage(sessionId: string, signal?: AbortSignal): Promise<PerSession | null> {
+  const url = `/api/dsh-usage-stats/summary?sessionId=${encodeURIComponent(sessionId)}`
+  const response = await fetch(url, { signal })
+  if (!response.ok) throw new Error(`session usage HTTP ${response.status}`)
+  const body = await response.json() as SummaryResponse
+  return body.perSession
 }
 
 export async function fetchBalance(signal?: AbortSignal): Promise<BalanceResponse> {

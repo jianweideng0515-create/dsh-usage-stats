@@ -718,10 +718,97 @@
   min-width: 0;
 }
 
+/* 会话页用量按钮 + 下拉面板 */
+
+.sessionUsageRoot {
+  position: relative;
+  display: inline-block;
+}
+
+.sessionUsage,
+.sessionUsageActive {
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  transition: background-color 0.13s, border-color 0.13s, color 0.13s;
+}
+
+.sessionUsage:hover {
+  color: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-label-dimmed);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.sessionUsage:focus-visible,
+.sessionUsageActive:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 1px;
+}
+
+.sessionUsageActive {
+  border-color: var(--dsw-alias-button-info-fill);
+  background: var(--dsw-alias-button-info-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+
+.sessionUsagePanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  min-width: 220px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sessionUsageMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 14px;
+  margin: 0;
+  min-width: 0;
+}
+
+.sessionUsageMetrics > div {
+  min-width: 0;
+}
+
+.sessionUsageMetrics dt {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sessionUsageMetrics dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kpiCard,
   .bar,
-  .barValue {
+  .barValue,
+  .sessionUsage,
+  .sessionUsageActive {
     transition: none;
   }
 }
