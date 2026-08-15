@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import type { ReactElement } from 'react'
+import { useMemo, useState } from 'react'
+import type { CSSProperties, ReactElement } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
@@ -128,9 +128,258 @@ function MiniLine(props: {
 /** 折线图最少数据点（数据不足时折线无意义，显示占位文案）。 */
 const MIN_LINE_POINTS = 4
 
-/** 统计卡片主体：KPI 网格 + Token 趋势 + 模型占比 + 命中率/费用折线 + 明细 + 余额。 */
+/** 提供商维度（影响 KPI 动态卡与配额/余额视图）。 */
+export type ProviderId = 'opencode' | 'deepseek' | 'openai' | 'ollama'
+
+const PROVIDERS: Array<{ key: ProviderId; labelKey: string }> = [
+  { key: 'opencode', labelKey: 'provider.opencode' },
+  { key: 'deepseek', labelKey: 'provider.deepseek' },
+  { key: 'openai', labelKey: 'provider.openai' },
+  { key: 'ollama', labelKey: 'provider.ollama' },
+]
+
+/** 用量概览 Tab 内容：KPI 4 卡 + Token 四分色拆分 + 趋势柱状 + 模型明细。 */
+function OverviewTab(props: {
+  t: (key: string) => string
+  summary: SummaryResponse
+  provider: ProviderId
+  balance: BalanceResponse | null
+  maxSeries: number
+}): ReactElement {
+  const { t, summary, provider, balance, maxSeries } = props
+  // KPI 卡 4：提供商动态卡（配额 / 余额 / 额度 / 本地）
+  let dynamicValue = '-'
+  let dynamicChip = ''
+  let dynamicSub = ''
+  if (provider === 'opencode') {
+    dynamicValue = balance?.quota?.weekly?.percent !== null && balance?.quota?.weekly?.percent !== undefined
+      ? `${balance.quota.weekly.percent}%`
+      : '-'
+    dynamicChip = t('provider.weeklyQuota')
+    dynamicSub = balance?.quota?.weekly?.resetsAt !== null && balance?.quota?.weekly?.resetsAt !== undefined
+      ? `${t('kpi.quotaUsed')} ${dynamicValue}`
+      : t('provider.notConnected')
+  } else if (provider === 'deepseek') {
+    dynamicValue = balance?.balance !== null && balance?.balance !== undefined
+      ? `${balance.balance} ${balance.currency}`
+      : '-'
+    dynamicChip = t('provider.prepay')
+    dynamicSub = balance?.updatedAt !== null && balance?.updatedAt !== undefined
+      ? `${t('balance.updated')} ${new Date(balance.updatedAt).toLocaleString()}`
+      : t('provider.notConnected')
+  } else if (provider === 'openai') {
+    dynamicChip = t('provider.monthlyLimit')
+    dynamicSub = t('provider.notConnected')
+  } else {
+    dynamicChip = t('provider.localFree')
+    dynamicSub = t('provider.notConnected')
+  }
+  return (
+    <>
+      <div className={styles.kpiGrid}>
+        <div className={styles.kpiCard}>
+          <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-business-primary)' }} />
+          <dd className={styles.kpiValue} title={t('metric.tokensHint')}>{formatTokens(summary.tokens.total)}</dd>
+          <dt className={styles.kpiLabel}>{t('metric.tokens')}</dt>
+          <dd className={styles.kpiSub}>{t('kpi.costPrefix')}: {formatCost(summary.cost)}</dd>
+        </div>
+        <div className={styles.kpiCard}>
+          <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary))' }} />
+          <dd className={styles.kpiValue}>{summary.requests}</dd>
+          <dt className={styles.kpiLabel}>{t('metric.requests')}</dt>
+          <dd className={styles.kpiSub}>{summary.turns} {t('metric.turns')} · {summary.activeDays} {t('kpi.daysUnit')}</dd>
+        </div>
+        <div className={styles.kpiCard}>
+          <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-success-primary)' }} />
+          <dd className={styles.kpiValueEmerald}>{formatRate(summary.avgCacheHitRate)}</dd>
+          <dt className={styles.kpiLabel}>{t('metric.avgHitRate')}</dt>
+          <dd className={styles.kpiSub}>{t('kpi.hitTokens')} {formatTokens(summary.tokens.cacheReadTokens)}</dd>
+        </div>
+        <div className={styles.kpiCardDynamic}>
+          <div className={styles.kpiTopRow}>
+            <span className={styles.kpiDynamicLabel}>{provider === 'opencode' ? t('provider.opencode') : provider === 'deepseek' ? t('provider.deepseek') : provider === 'openai' ? t('provider.openai') : t('provider.ollama')}</span>
+            <span className={`${styles.chip} ${styles.chipBlue}`}>{dynamicChip}</span>
+          </div>
+          <dd className={styles.kpiValueAccent}>{dynamicValue}</dd>
+          <dd className={styles.kpiSub}>{dynamicSub}</dd>
+        </div>
+      </div>
+      <div className={styles.tokenSplit}>
+        <span className={styles.tokenItem}><span className={styles.dot} style={{ background: '#3b82f6' }} />{t('tokens.input')} {formatTokens(summary.tokens.uncachedInputTokens)}</span>
+        <span className={styles.tokenItem}><span className={styles.dot} style={{ background: '#10b981' }} />{t('tokens.cacheRead')} {formatTokens(summary.tokens.cacheReadTokens)}</span>
+        <span className={styles.tokenItem}><span className={styles.dot} style={{ background: '#f59e0b' }} />{t('tokens.cacheWrite')} {formatTokens(summary.tokens.cacheWriteTokens)}</span>
+        <span className={styles.tokenItem}><span className={styles.dot} style={{ background: '#6366f1' }} />{t('tokens.output')} {formatTokens(summary.tokens.outputTokens)}</span>
+      </div>
+      <h4 className={styles.heading}>{t('trend.title')}</h4>
+      <div className={styles.bars}>
+        {summary.series.map((p) => (
+          <div key={p.bucket} className={styles.barCol} title={`${p.bucket}: ${p.requests} ${t('metric.requests')}, ${formatTokens(p.tokens)} tok`}>
+            <span className={styles.barValue}>{formatTokens(p.tokens)}</span>
+            <div className={styles.bar} style={{ height: maxSeries > 0 ? `${Math.max(4, (p.tokens / maxSeries) * 100)}%` : '4%' }} />
+            <span className={styles.barBucket}>{p.bucket.slice(5)}</span>
+          </div>
+        ))}
+      </div>
+      {summary.perSession !== null ? (
+        <dl className={styles.metrics}>
+          <div><dt>{t('metric.lastHit')}</dt><dd>{summary.perSession.lastRequestHitRate === null ? '-' : formatRate(summary.perSession.lastRequestHitRate)}</dd></div>
+          <div><dt>{t('metric.lastCost')}</dt><dd>{summary.perSession.lastRequestCost === null ? '-' : formatCost(summary.perSession.lastRequestCost)}</dd></div>
+          <div><dt>{t('metric.sessionTurns')}</dt><dd>{summary.perSession.turns}</dd></div>
+          <div><dt>{t('metric.sessionCost')}</dt><dd>{formatCost(summary.perSession.cost)}</dd></div>
+        </dl>
+      ) : null}
+      <h4 className={styles.heading}>{t('model.table')}</h4>
+      <table className={styles.table}>
+        <thead><tr><th>{t('metric.topModel')}</th><th>{t('metric.requests')}</th><th>{t('metric.tokens')}</th><th>{t('metric.cost')}</th></tr></thead>
+        <tbody>
+          {summary.byModel.map((m) => (
+            <tr key={m.model}>
+              <td>{m.model}</td><td>{m.requests}</td><td>{formatTokens(m.tokens)}</td><td>{formatCost(m.cost)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {summary.uncountedRequests > 0 ? <p className={styles.status}>{t('metric.uncounted')}: {summary.uncountedRequests}</p> : null}
+    </>
+  )
+}
+
+/** 模型与缓存 Tab：donut 占比 + 缓存效率诊断 + 命中率/费用折线。 */
+function ModelsTab(props: {
+  t: (key: string) => string
+  summary: SummaryResponse
+  segments: Array<{ model: string; requests: number; share: number; colorVar: string }>
+  donutStyle: CSSProperties | undefined
+  hitRateSeries: number[]
+  costSeries: number[]
+  costAllZero: boolean
+}): ReactElement {
+  const { t, summary, segments, donutStyle, hitRateSeries, costSeries, costAllZero } = props
+  return (
+    <div className={styles.chartRow}>
+      <div className={styles.chartCell}>
+        <h4 className={styles.heading}>{t('chart.donut')}</h4>
+        {segments.length === 0 ? <p className={styles.status}>{t('chart.noData')}</p> : (
+          <div className={styles.donutWrap}>
+            <div className={styles.donut} style={donutStyle} role="img" aria-label={segments.map((s) => `${s.model}: ${Math.round(s.share * 100)}%`).join('; ')}>
+              <div className={styles.donutHole}>
+                <span className={styles.donutTotal}>{summary.requests}</span>
+                <span className={styles.donutTotalLabel}>{t('metric.requests')}</span>
+              </div>
+            </div>
+            <ul className={styles.legend}>
+              {segments.map((s) => (
+                <li key={s.model}>
+                  <span className={styles.legendDot} style={{ background: s.colorVar }} />
+                  <span className={styles.legendModel}>{s.model === '__other__' ? t('chart.other') : s.model}</span>
+                  <span className={styles.legendShare}>{Math.round(s.share * 100)}%</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+      <div className={styles.chartCell}>
+        <h4 className={styles.heading}>{t('chart.cacheDiag')}</h4>
+        <div className={styles.cacheDiag}>
+          <strong>{t('chart.cacheHigh')} ({formatRate(summary.avgCacheHitRate)})</strong>
+          <span>{t('chart.cacheSaved')} {formatTokens(summary.tokens.cacheReadTokens)}</span>
+        </div>
+      </div>
+      <div className={styles.chartCell}>
+        <h4 className={styles.heading}>{t('chart.hitRate')}</h4>
+        {hitRateSeries.length >= MIN_LINE_POINTS
+          ? <MiniLine values={hitRateSeries} colorVar="var(--dsw-alias-state-success-primary)" dashed format={formatRate} />
+          : <p className={styles.status}>{t('chart.insufficientData')}</p>}
+      </div>
+      <div className={styles.chartCell}>
+        <h4 className={styles.heading}>{t('chart.cost')}</h4>
+        {costAllZero
+          ? <p className={styles.status}>{t('chart.noCost')}</p>
+          : costSeries.length >= MIN_LINE_POINTS
+            ? <MiniLine values={costSeries} colorVar="var(--dsw-alias-state-business-primary)" format={formatCost} />
+            : <p className={styles.status}>{t('chart.insufficientData')}</p>}
+      </div>
+    </div>
+  )
+}
+
+/** 余额与配额 Tab：按提供商展示余额/配额（参考原型 Tab 3）。 */
+function QuotaTab(props: {
+  t: (key: string) => string
+  provider: ProviderId
+  balance: BalanceResponse | null
+  balanceRefreshing: boolean
+  onRefreshBalance: () => void
+}): ReactElement {
+  const { t, provider, balance, balanceRefreshing, onRefreshBalance } = props
+  const quota = balance?.quota ?? null
+  if (balance === null) return <p className={styles.status}>{t('loading')}</p>
+  if (provider === 'opencode') {
+    if (quota === null) return <p className={styles.status}>{t('balance.unavailable')}{balance.error !== null ? `: ${balance.error}` : ''}</p>
+    const rows = [
+      { key: 'rolling', label: t('quota.rolling'), window: quota.rolling },
+      { key: 'weekly', label: t('quota.weekly'), window: quota.weekly },
+      { key: 'monthly', label: t('quota.monthly'), window: quota.monthly },
+    ] as const
+    return (
+      <>
+        <div className={styles.quotaRows}>
+          {rows.map((row) => (
+            <div key={row.key} className={styles.quotaRow}>
+              <span className={styles.quotaLabel}>{row.label}</span>
+              <span className={styles.quotaPercent}>{row.window === null ? '-' : `${row.window.percent}%`}</span>
+              <span className={styles.quotaReset}>{row.window === null ? '' : formatResetCountdown(row.window.resetsAt, t)}</span>
+            </div>
+          ))}
+        </div>
+        {balance.updatedAt !== null ? <p className={styles.status}>{t('balance.updated')}: {new Date(balance.updatedAt).toLocaleString()}</p> : null}
+        {balance.source !== null ? <p className={styles.status}>{t('balance.source')}: {balance.source.source}</p> : null}
+        <button type="button" className={styles.refresh} disabled={balanceRefreshing} onClick={onRefreshBalance}>
+          {balanceRefreshing ? t('balance.refreshing') : t('balance.refresh')}
+        </button>
+      </>
+    )
+  }
+  if (provider === 'deepseek') {
+    if (balance.balance === null) {
+      return <p className={styles.status}>{t('balance.unavailable')}{balance.error !== null ? `: ${balance.error}` : ''}</p>
+    }
+    return (
+      <>
+        <p className={styles.status}>{t('balance.amount')}: <strong>{balance.balance} {balance.currency}</strong></p>
+        {balance.updatedAt !== null ? <p className={styles.status}>{t('balance.updated')}: {new Date(balance.updatedAt).toLocaleString()}</p> : null}
+        {balance.source !== null ? <p className={styles.status}>{t('balance.source')}: {balance.source.source}</p> : null}
+        <button type="button" className={styles.refresh} disabled={balanceRefreshing} onClick={onRefreshBalance}>
+          {balanceRefreshing ? t('balance.refreshing') : t('balance.refresh')}
+        </button>
+      </>
+    )
+  }
+  return <p className={styles.status}>{t('provider.notConnected')}</p>
+}
+
+/** 重置倒计时文案：'2 天 3 小时后重置' / '5 小时后重置' / '30 分钟后重置'。 */
+function formatResetCountdown(resetsAt: string | null, t: (key: string) => string): string {
+  if (resetsAt === null) return ''
+  const ms = Date.parse(resetsAt) - Date.now()
+  if (!Number.isFinite(ms) || ms <= 0) return t('quota.resetSoon')
+  const totalMinutes = Math.floor(ms / 60_000)
+  if (totalMinutes < 60) return `${totalMinutes} ${t('quota.minutes')}${t('quota.after')}`
+  const hours = Math.floor(totalMinutes / 60)
+  const days = Math.floor(hours / 24)
+  if (days > 0) {
+    const restHours = hours - days * 24
+    return restHours > 0 ? `${days} ${t('quota.days')} ${restHours} ${t('quota.hours')}${t('quota.after')}` : `${days} ${t('quota.days')}${t('quota.after')}`
+  }
+  return `${hours} ${t('quota.hours')}${t('quota.after')}`
+}
+
+/** 统计卡片主体：折叠卡头 + 控制栏 + 4 KPI 卡 + 三级 Tab。 */
 export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
   const { t, summary, balance, loading, error } = props
+  const [activeTab, setActiveTab] = useState<'overview' | 'models' | 'quota'>('overview')
+  const [provider, setProvider] = useState<ProviderId>('opencode')
   const maxSeries = useMemo(() => {
     if (summary === null || summary.series.length === 0) return 0
     return Math.max(...summary.series.map((p) => p.tokens))
@@ -152,24 +401,39 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
 
   return (
     <div className={styles.content}>
-      <div className={styles.rangeRow}>
-        {RANGES.map((r) => (
+      <div className={styles.controlBar}>
+        <div className={styles.rangeRow}>
+          {RANGES.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              className={props.rangeDays === r.days ? styles.rangeActive : styles.range}
+              onClick={() => props.onRangeDays(r.days)}
+            >
+              {t('range.' + r.key)}
+            </button>
+          ))}
           <button
-            key={r.key}
             type="button"
-            className={props.rangeDays === r.days ? styles.rangeActive : styles.range}
-            onClick={() => props.onRangeDays(r.days)}
+            className={props.rangeDays === 'custom' ? styles.rangeActive : styles.range}
+            onClick={() => props.onRangeDays('custom')}
           >
-            {t('range.' + r.key)}
+            {t('range.custom')}
           </button>
-        ))}
-        <button
-          type="button"
-          className={props.rangeDays === 'custom' ? styles.rangeActive : styles.range}
-          onClick={() => props.onRangeDays('custom')}
-        >
-          {t('range.custom')}
-        </button>
+        </div>
+        <div className={styles.providerRow}>
+          <span className={styles.providerLabel}>{t('provider.switch')}</span>
+          {PROVIDERS.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              className={provider === p.key ? styles.providerPillActive : styles.providerPill}
+              onClick={() => setProvider(p.key)}
+            >
+              {t(p.labelKey)}
+            </button>
+          ))}
+        </div>
       </div>
       {props.rangeDays === 'custom' ? (
         <div className={styles.customRow}>
@@ -187,139 +451,33 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
       {error !== null ? <p className={styles.status}>{t('error')}: {error}</p> : null}
       {summary !== null ? (
         <>
-          <div className={styles.kpiGrid}>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-business-primary)' }} />
-              <dd className={styles.kpiValue} title={t('metric.tokensHint')}>{formatTokens(summary.tokens.total)}</dd>
-              <dt className={styles.kpiLabel}>{t('metric.tokens')}</dt>
-            </div>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary))' }} />
-              <dd className={styles.kpiValue}>{summary.requests}</dd>
-              <dt className={styles.kpiLabel}>{t('metric.requests')}</dt>
-            </div>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-success-primary)' }} />
-              <dd className={styles.kpiValue}>{summary.turns}</dd>
-              <dt className={styles.kpiLabel}>{t('metric.turns')}</dt>
-            </div>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-warn-primary)' }} />
-              <dd className={styles.kpiValue}>{summary.activeDays}</dd>
-              <dt className={styles.kpiLabel}>{t('metric.activeDays')}</dt>
-            </div>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-success-primary)' }} />
-              <dd className={styles.kpiValue}>{formatRate(summary.avgCacheHitRate)}</dd>
-              <dt className={styles.kpiLabel}>{t('metric.avgHitRate')}</dt>
-            </div>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-warn-primary)' }} />
-              <dd className={styles.kpiValue}>{formatCost(summary.cost)}</dd>
-              <dt className={styles.kpiLabel}>{t('metric.cost')}</dt>
-            </div>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-error-primary)' }} />
-              <dd className={styles.kpiValue}>{summary.uncountedRequests}</dd>
-              <dt className={styles.kpiLabel}>{t('metric.uncounted')}</dt>
-            </div>
-          </div>
-          <div className={styles.tokenSplit}>
-            <span>{t('tokens.input')} {formatTokens(summary.tokens.uncachedInputTokens)}</span>
-            <span>{t('tokens.cacheRead')} {formatTokens(summary.tokens.cacheReadTokens)}</span>
-            <span>{t('tokens.cacheWrite')} {formatTokens(summary.tokens.cacheWriteTokens)}</span>
-            <span>{t('tokens.output')} {formatTokens(summary.tokens.outputTokens)}</span>
-          </div>
-          <h4 className={styles.heading}>{t('trend.title')}</h4>
-          <div className={styles.bars}>
-            {summary.series.map((p) => (
-              <div key={p.bucket} className={styles.barCol} title={`${p.bucket}: ${p.requests} ${t('metric.requests')}, ${formatTokens(p.tokens)} tok`}>
-                <span className={styles.barValue}>{formatTokens(p.tokens)}</span>
-                <div className={styles.bar} style={{ height: maxSeries > 0 ? `${Math.max(4, (p.tokens / maxSeries) * 100)}%` : '4%' }} />
-                <span className={styles.barBucket}>{p.bucket.slice(5)}</span>
-              </div>
+          <div className={styles.tabNav}>
+            {([
+              { key: 'overview', labelKey: 'tab.overview' },
+              { key: 'models', labelKey: 'tab.models' },
+              { key: 'quota', labelKey: 'tab.quota' },
+            ] as Array<{ key: 'overview' | 'models' | 'quota'; labelKey: string }>).map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                className={activeTab === tab.key ? styles.tabBtnActive : styles.tabBtn}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {t(tab.labelKey)}
+              </button>
             ))}
           </div>
-          <div className={styles.chartRow}>
-            <div className={styles.chartCell}>
-              <h4 className={styles.heading}>{t('chart.donut')}</h4>
-              {segments.length === 0 ? <p className={styles.status}>{t('chart.noData')}</p> : (
-                <div className={styles.donutWrap}>
-                  <div className={styles.donut} style={donutStyle} role="img" aria-label={segments.map((s) => `${s.model}: ${Math.round(s.share * 100)}%`).join('; ')}>
-                    <div className={styles.donutHole}>
-                      <span className={styles.donutTotal}>{summary.requests}</span>
-                      <span className={styles.donutTotalLabel}>{t('metric.requests')}</span>
-                    </div>
-                  </div>
-                  <ul className={styles.legend}>
-                    {segments.map((s) => (
-                      <li key={s.model}>
-                        <span className={styles.legendDot} style={{ background: s.colorVar }} />
-                        <span className={styles.legendModel}>{s.model === '__other__' ? t('chart.other') : s.model}</span>
-                        <span className={styles.legendShare}>{Math.round(s.share * 100)}%</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-            <div className={styles.chartCell}>
-              <h4 className={styles.heading}>{t('chart.hitRate')}</h4>
-              {hitRateSeries.length >= MIN_LINE_POINTS
-                ? <MiniLine values={hitRateSeries} colorVar="var(--dsw-alias-state-success-primary)" dashed format={formatRate} />
-                : <p className={styles.status}>{t('chart.insufficientData')}</p>}
-            </div>
-            <div className={styles.chartCell}>
-              <h4 className={styles.heading}>{t('chart.cost')}</h4>
-              {costAllZero
-                ? <p className={styles.status}>{t('chart.noCost')}</p>
-                : costSeries.length >= MIN_LINE_POINTS
-                  ? <MiniLine values={costSeries} colorVar="var(--dsw-alias-state-business-primary)" format={formatCost} />
-                  : <p className={styles.status}>{t('chart.insufficientData')}</p>}
-            </div>
-          </div>
-          {summary.perSession !== null ? (
-            <dl className={styles.metrics}>
-              <div><dt>{t('metric.lastHit')}</dt><dd>{summary.perSession.lastRequestHitRate === null ? '-' : formatRate(summary.perSession.lastRequestHitRate)}</dd></div>
-              <div><dt>{t('metric.lastCost')}</dt><dd>{summary.perSession.lastRequestCost === null ? '-' : formatCost(summary.perSession.lastRequestCost)}</dd></div>
-              <div><dt>{t('metric.sessionTurns')}</dt><dd>{summary.perSession.turns}</dd></div>
-              <div><dt>{t('metric.sessionCost')}</dt><dd>{formatCost(summary.perSession.cost)}</dd></div>
-            </dl>
+          {activeTab === 'overview' ? (
+            <OverviewTab t={t} summary={summary} provider={provider} balance={balance} maxSeries={maxSeries} />
           ) : null}
-          <h4 className={styles.heading}>{t('model.table')}</h4>
-          <table className={styles.table}>
-            <thead><tr><th>{t('metric.topModel')}</th><th>{t('metric.requests')}</th><th>{t('metric.tokens')}</th><th>{t('metric.cost')}</th></tr></thead>
-            <tbody>
-              {summary.byModel.map((m) => (
-                <tr key={m.model}>
-                  <td>{m.model}</td><td>{m.requests}</td><td>{formatTokens(m.tokens)}</td><td>{formatCost(m.cost)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {activeTab === 'models' ? (
+            <ModelsTab t={t} summary={summary} segments={segments} donutStyle={donutStyle} hitRateSeries={hitRateSeries} costSeries={costSeries} costAllZero={costAllZero} />
+          ) : null}
+          {activeTab === 'quota' ? (
+            <QuotaTab t={t} provider={provider} balance={balance} balanceRefreshing={props.balanceRefreshing} onRefreshBalance={props.onRefreshBalance} />
+          ) : null}
         </>
       ) : null}
-      <div className={styles.balance}>
-        <h4 className={styles.heading}>{t('balance.title')}</h4>
-        {balance === null ? <p className={styles.status}>{t('loading')}</p> : balance.quota !== null && balance.quota !== undefined ? (
-          <p>
-            {t('quota.rolling')}: {balance.quota.rolling?.percent ?? '-'}% · {t('quota.weekly')}: {balance.quota.weekly?.percent ?? '-'}% · {t('quota.monthly')}: {balance.quota.monthly?.percent ?? '-'}%
-            {balance.updatedAt !== null ? ` (${t('balance.updated')}: ${new Date(balance.updatedAt).toLocaleString()})` : ''}
-            {balance.source !== null ? ` (${t('balance.source')}: ${balance.source.source})` : ''}
-          </p>
-        ) : balance.balance === null ? (
-          <p className={styles.status}>{t('balance.unavailable')}{balance.error !== null ? `: ${balance.error}` : ''}</p>
-        ) : (
-          <p>
-            {t('balance.amount')}: {balance.balance} {balance.currency}
-            {balance.updatedAt !== null ? ` (${t('balance.updated')}: ${new Date(balance.updatedAt).toLocaleString()})` : ''}
-            {balance.source !== null ? ` (${t('balance.source')}: ${balance.source.source})` : ''}
-          </p>
-        )}
-        <button type="button" className={styles.refresh} disabled={props.balanceRefreshing} onClick={props.onRefreshBalance}>
-          {props.balanceRefreshing ? t('balance.refreshing') : t('balance.refresh')}
-        </button>
-      </div>
     </div>
   )
 }
@@ -534,8 +692,8 @@ type UsageStatsSlotProps =
 type CardTranslate = (key: string) => string
 
 /**
- * 可折叠外壳：标题头 + chevron，点击展开/收起统计内容。
- * 收起时内容不渲染（DOM 干净），controller 同步暂停轮询。
+ * 可折叠外壳：图标 badge + 标题 + 「已激活」chip + 描述 + chevron，
+ * 点击展开/收起统计内容。收起时内容不渲染（DOM 干净），controller 同步暂停轮询。
  */
 export function StatsCardShell(props: {
   t: CardTranslate
@@ -555,8 +713,20 @@ export function StatsCardShell(props: {
         title={props.description}
         onClick={props.onToggle}
       >
+        <span className={styles.iconBadge} aria-hidden="true">
+          {/* 内联柱状图图标（无外部依赖、无 emoji） */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 3v18h18" />
+            <rect x="7" y="12" width="3" height="6" rx="0.8" />
+            <rect x="13" y="8" width="3" height="10" rx="0.8" />
+            <rect x="19" y="5" width="3" height="13" rx="0.8" />
+          </svg>
+        </span>
         <span className={styles.headText}>
-          <span className={styles.name}>{props.title}</span>
+          <span className={styles.nameRow}>
+            <span className={styles.name}>{props.title}</span>
+            <span className={styles.activeBadge}>{props.t('card.active')}</span>
+          </span>
           <span className={styles.description}>{props.description}</span>
         </span>
         <span className={props.expanded ? styles.chevronOpen : styles.chevron}>▾</span>

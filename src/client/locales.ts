@@ -4,6 +4,27 @@ export interface UsageStatsCopy {
   'settings.description': string
   'settings.enabled': string
   'settings.enabledHint': string
+  'card.active': string
+  'tab.overview': string
+  'tab.models': string
+  'tab.quota': string
+  'provider.switch': string
+  'provider.opencode': string
+  'provider.deepseek': string
+  'provider.openai': string
+  'provider.ollama': string
+  'provider.weeklyQuota': string
+  'provider.prepay': string
+  'provider.monthlyLimit': string
+  'provider.localFree': string
+  'provider.notConnected': string
+  'kpi.hitTokens': string
+  'kpi.daysUnit': string
+  'kpi.costPrefix': string
+  'kpi.quotaUsed': string
+  'chart.cacheDiag': string
+  'chart.cacheHigh': string
+  'chart.cacheSaved': string
   'session.usageLabel': string
   'session.panelTitle': string
   'session.statusOk': string
@@ -96,6 +117,27 @@ export const zh: UsageStatsCopy = {
   'settings.description': 'Token、请求、轮次、缓存命中、费用估算与余额。',
   'settings.enabled': '启用用量统计',
   'settings.enabledHint': '关闭后停止统计与余额刷新。',
+  'card.active': '已激活',
+  'tab.overview': '用量概览',
+  'tab.models': '模型与缓存',
+  'tab.quota': '余额与配额',
+  'provider.switch': '切换提供商',
+  'provider.opencode': 'OpenCode Go',
+  'provider.deepseek': 'DeepSeek 官方',
+  'provider.openai': 'OpenAI',
+  'provider.ollama': 'Ollama',
+  'provider.weeklyQuota': '周配额',
+  'provider.prepay': '预付费',
+  'provider.monthlyLimit': '月限制',
+  'provider.localFree': '本地免费',
+  'provider.notConnected': '未接入',
+  'kpi.hitTokens': '命中',
+  'kpi.daysUnit': '天',
+  'kpi.costPrefix': '费用',
+  'kpi.quotaUsed': '已用',
+  'chart.cacheDiag': '缓存效率诊断',
+  'chart.cacheHigh': '缓存命中效率高',
+  'chart.cacheSaved': '近 7 天通过缓存避免重算',
   'session.usageLabel': '用量:',
   'session.panelTitle': '用量与开销',
   'session.statusOk': '服务正常',
@@ -185,6 +227,27 @@ export const en: UsageStatsCopy = {
   'settings.description': 'Tokens, requests, turns, cache hits, cost estimates and balance.',
   'settings.enabled': 'Enable usage stats',
   'settings.enabledHint': 'When off, tracking and balance refresh stop.',
+  'card.active': 'Active',
+  'tab.overview': 'Overview',
+  'tab.models': 'Models & cache',
+  'tab.quota': 'Balance & quota',
+  'provider.switch': 'Provider',
+  'provider.opencode': 'OpenCode Go',
+  'provider.deepseek': 'DeepSeek',
+  'provider.openai': 'OpenAI',
+  'provider.ollama': 'Ollama',
+  'provider.weeklyQuota': 'Weekly quota',
+  'provider.prepay': 'Prepaid',
+  'provider.monthlyLimit': 'Monthly limit',
+  'provider.localFree': 'Local free',
+  'provider.notConnected': 'Not connected',
+  'kpi.hitTokens': 'hit',
+  'kpi.daysUnit': 'd',
+  'kpi.costPrefix': 'Cost',
+  'kpi.quotaUsed': 'used',
+  'chart.cacheDiag': 'Cache efficiency',
+  'chart.cacheHigh': 'High cache hit efficiency',
+  'chart.cacheSaved': 'Cache avoided recompute in the last 7 days',
   'session.usageLabel': 'Usage:',
   'session.panelTitle': 'Usage & cost',
   'session.statusOk': 'All systems normal',

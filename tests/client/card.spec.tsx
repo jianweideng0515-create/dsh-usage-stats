@@ -51,10 +51,12 @@ describe('UsageStatsCard', () => {
       error={null}
       {...baseProps}
     />)
-    expect(screen.getAllByText('12').length).toBeGreaterThan(0)  // 请求数量（KPI 卡 + donut 中心）
-    expect(screen.getByText('9')).toBeTruthy()            // 完成轮次
-    expect(screen.getAllByText('deepseek-chat').length).toBeGreaterThan(0) // 最常用模型 / 明细表
-    expect(screen.getByText(/12\.34/)).toBeTruthy()      // 余额
+    // 默认在「用量概览」Tab：KPI 请求数量 / 轮次+天数 sub / 模型明细
+    expect(screen.getAllByText('12').length).toBeGreaterThan(0)
+    expect(screen.getByText(/9 metric\.turns · 2 kpi\.daysUnit/)).toBeTruthy()
+    expect(screen.getAllByText('deepseek-chat').length).toBeGreaterThan(0)
+    // 提供商动态卡默认 opencode（无配额数据 → 未接入占位）
+    expect(screen.getAllByText('provider.notConnected').length).toBeGreaterThan(0)
   })
 
   it('命中率显示两位小数', () => {
@@ -72,6 +74,27 @@ describe('UsageStatsCard', () => {
     expect(screen.getAllByText('40.00%').length).toBeGreaterThan(0)
   })
 
+  it('余额与配额 Tab：切换提供商展示对应余额', () => {
+    const t = (key: string) => key
+    render(<UsageStatsCard
+      t={t}
+      summary={summary}
+      balance={{ balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' }}
+      loading={false}
+      error={null}
+      {...baseProps}
+    />)
+    // 切到余额 Tab → 默认 opencode（无配额 → 不可用提示）
+    fireEvent.click(screen.getByText('tab.quota'))
+    expect(screen.getByText(/balance\.unavailable/)).toBeTruthy()
+    // 切到 DeepSeek → 金额余额
+    fireEvent.click(screen.getByText('provider.deepseek'))
+    expect(screen.getByText(/12\.34 CNY/)).toBeTruthy()
+    // 切到 Ollama → 未接入提示
+    fireEvent.click(screen.getByText('provider.ollama'))
+    expect(screen.getByText('provider.notConnected')).toBeTruthy()
+  })
+
   it('余额不可用时显示原因', () => {
     const t = (key: string) => key
     render(<UsageStatsCard
@@ -82,6 +105,7 @@ describe('UsageStatsCard', () => {
       error={null}
       {...baseProps}
     />)
+    fireEvent.click(screen.getByText('tab.quota'))
     expect(screen.getByText(/provider does not expose an endpoint/)).toBeTruthy()
   })
 })
