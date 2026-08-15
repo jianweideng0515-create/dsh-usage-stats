@@ -13,6 +13,7 @@ export interface UsageStatsCopy {
   'session.heroRounds': string
   'session.heroAvgHit': string
   'session.recentTitle': string
+  'session.recentModel': string
   'session.recentHit': string
   'session.recentTokens': string
   'session.recentCost': string
@@ -104,6 +105,7 @@ export const zh: UsageStatsCopy = {
   'session.heroRounds': '完成轮次',
   'session.heroAvgHit': '平均命中',
   'session.recentTitle': '最近单次请求',
+  'session.recentModel': '模型',
   'session.recentHit': '缓存命中率',
   'session.recentTokens': '本次消耗',
   'session.recentCost': '本次费用',
@@ -192,9 +194,10 @@ export const en: UsageStatsCopy = {
   'session.heroRounds': 'Rounds',
   'session.heroAvgHit': 'Avg hit',
   'session.recentTitle': 'Last request',
+  'session.recentModel': 'Model',
   'session.recentHit': 'Cache hit rate',
-  'session.recentTokens': 'Cost this request',
-  'session.recentCost': 'Fee this request',
+  'session.recentTokens': 'Tokens this request',
+  'session.recentCost': 'Cost this request',
   'session.balance': 'Account balance',
   'session.unpricedHint': '* Model has no configured price; cost counted as 0 (configure prices in plugin settings)',
   'session.noRecord': 'No usage record for this session (history before the plugin started metering is not backfilled)',

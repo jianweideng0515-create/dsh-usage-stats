@@ -481,7 +481,7 @@ export class UsageStatsCardController {
     try {
       this.balance = await fetchBalance()
     } catch (e) {
-      this.balance = { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null, quota: null }
+      this.balance = { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null, quota: null, costCurrency: 'CNY' }
     }
     this.publish()
   }
@@ -510,7 +510,7 @@ export class UsageStatsCardController {
           try {
             this.balance = await refreshBalance()
           } catch (e) {
-            this.balance = { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null, quota: null }
+            this.balance = { balance: null, currency: 'CNY', updatedAt: null, error: String((e as Error)?.message ?? e), source: null, quota: null, costCurrency: 'CNY' }
           }
           this.balanceRefreshing = false
           this.publish()

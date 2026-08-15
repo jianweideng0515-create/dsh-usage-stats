@@ -56,6 +56,13 @@ function formatCost(cost: number): string {
   return cost.toFixed(4)
 }
 
+/** 费用计价货币符号：CNY → ¥，USD → $，其他货币原样前缀。 */
+function costSymbol(currency: string): string {
+  if (currency === 'CNY') return '¥'
+  if (currency === 'USD') return '$'
+  return currency === '' ? '' : `${currency} `
+}
+
 function formatRate(rate: number): string {
   return (rate * 100).toFixed(2) + '%'
 }
@@ -243,6 +250,8 @@ export function SessionUsageButton(props: {
   const turnCost = currentTurn !== null ? currentTurn.cost : (session?.lastTurnCost ?? null)
   const turnTokensCompact = turnTokens === null ? null : formatCompactTokens(turnTokens)
   const balance = state.balance
+  // 费用计价货币符号（¥/$），来自插件设置 currency（balance.costCurrency 透传）。
+  const costSym = costSymbol(balance?.costCurrency ?? '')
   // 有真实消耗但费用为 0：模型未配置单价（内置价格表外），费用按 0 计。
   const unpriced = session !== null && session.cost === 0 && tokensTotal > 0
 
@@ -282,7 +291,7 @@ export function SessionUsageButton(props: {
         <span className={styles.labelMuted}>{t('session.usageLabel')}</span>
         <span className={styles.valHighlightTokens}>{tokens === null ? '-' : `${tokens.value}${tokens.unit}`}</span>
         <span className={styles.valSeparator}>|</span>
-        <span className={styles.valHighlightCost}>{session === null ? '-' : formatCost(session.cost)}</span>
+        <span className={styles.valHighlightCost}>{session === null ? '-' : `${costSym}${formatCost(session.cost)}`}</span>
         <ChevronDownIcon open={state.open} />
       </button>
       {state.open ? (
@@ -315,7 +324,7 @@ export function SessionUsageButton(props: {
                     </div>
                     <div className={styles.heroCol}>
                       <div className={styles.statNumGroup}>
-                        <span className={styles.statNumber}>{formatCost(session.cost)}{unpriced ? '*' : ''}</span>
+                        <span className={styles.statNumber}>{costSym}{formatCost(session.cost)}{unpriced ? '*' : ''}</span>
                       </div>
                       <div className={styles.statLabel}>{t('session.heroCost')}</div>
                     </div>
@@ -339,17 +348,16 @@ export function SessionUsageButton(props: {
                 </div>
                 <div className={styles.recentCard}>
                   <div className={styles.recentGrid}>
-                    <span className={styles.recentModel} title={session.lastModel ?? undefined}>{session.lastModel ?? '-'}</span>
-                    <span className={styles.recentHitGroup}>
-                      <span className={styles.recentHitLabel}>{t('session.recentHit')}</span>
+                    <span className={styles.recentLabel}>{t('session.recentModel')}</span>
+                    <span className={styles.recentValue} title={session.lastModel ?? undefined}>{session.lastModel ?? '-'}</span>
+                    <span className={styles.recentLabel}>{t('session.recentHit')}</span>
+                    <span className={styles.recentValue}>
                       <span className={styles.hitBadge}>{recentHit === null ? '-' : `${recentHit.toFixed(2)}%`}</span>
                     </span>
-                    <span className={styles.recentTokensLine}>
-                      {t('session.recentTokens')}: <strong className={styles.strongText}>{turnTokensCompact === null ? '-' : `${turnTokensCompact.value}${turnTokensCompact.unit} Tokens`}</strong>
-                    </span>
-                    <span className={styles.recentCostLine}>
-                      {t('session.recentCost')}: <strong className={styles.strongText}>{turnCost === null ? '-' : formatCost(turnCost)}</strong>
-                    </span>
+                    <span className={styles.recentLabel}>{t('session.recentTokens')}</span>
+                    <span className={styles.recentValue}>{turnTokensCompact === null ? '-' : `${turnTokensCompact.value}${turnTokensCompact.unit} Tokens`}</span>
+                    <span className={styles.recentLabel}>{t('session.recentCost')}</span>
+                    <span className={styles.recentValue}>{turnCost === null ? '-' : `${costSym}${formatCost(turnCost)}`}</span>
                   </div>
                 </div>
                 {unpriced ? (

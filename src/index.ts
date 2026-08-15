@@ -129,6 +129,8 @@ export function apply(ctx: Context, config: Config = {}): void {
     // key 优先进程环境变量，其次 DSH 凭据文件（~/.dsh/.credentials.yaml，
     // 形如 "KEY: value" 行）——DSH 的 key 通常存在凭据文件而非环境变量。
     getEnv: (name) => process.env[name] ?? readCredentialsFile()[name],
+    // 费用计价货币跟随插件设置 currency（费用行 ¥/$ 符号）。
+    getCostCurrency: () => resolve().currency,
   })
   const syncBalance = (): void => {
     const value = resolve().balance ?? { mode: 'auto' }

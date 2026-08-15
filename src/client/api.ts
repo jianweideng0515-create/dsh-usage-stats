@@ -81,6 +81,8 @@ export interface BalanceResponse {
   source: { baseUrl: string; path: string; apiKeyEnv: string; source: string } | null
   /** OpenCode 等订阅制配额；金额型（DeepSeek）为 null。 */
   quota: UsageQuota | null
+  /** 费用计价货币（插件设置 currency；CNY 显示 ¥，USD 显示 $）。 */
+  costCurrency: string
 }
 
 /** 拉取区间汇总（不带 sessionId：纯区间总量，perSession 恒 null）。 */

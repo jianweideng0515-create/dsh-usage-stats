@@ -26,8 +26,8 @@ const { mockSessionResponses } = vi.hoisted(() => ({
 
 vi.mock('../../src/client/api.ts', () => ({
   fetchSessionUsage: vi.fn((sid: string) => Promise.resolve(mockSessionResponses.get(sid) ?? null)),
-  fetchBalance: vi.fn(() => Promise.resolve({ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null })),
-  refreshBalance: vi.fn(() => Promise.resolve({ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null })),
+  fetchBalance: vi.fn(() => Promise.resolve({ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' })),
+  refreshBalance: vi.fn(() => Promise.resolve({ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' })),
 }))
 
 /** 文件级清理：每个用例后卸载 DOM（vitest 未开 globals，无自动 cleanup）。 */
@@ -82,18 +82,18 @@ describe('SessionUsageButton', () => {
       state={baseState({
         open: true,
         perSession: session,
-        balance: { balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null },
+        balance: { balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' },
       })}
       onToggle={() => {}}
     />)
     expect(screen.getByRole('button', { expanded: true })).toBeTruthy()
-    // 本次命中 40.00%（hitBadge）；本次费用 = 本轮消耗 0.0800（lastTurnCost，无进行中轮）
+    // 本次命中 40.00%（hitBadge）；本次费用 = 本轮消耗 0.0800（lastTurnCost，无进行中轮，带 ¥）
     expect(screen.getByText('40.00%')).toBeTruthy()
-    expect(screen.getByText('0.0800')).toBeTruthy()
+    expect(screen.getByText('¥0.0800')).toBeTruthy()
     // 完成轮次：metaValText "5 次"
     expect(screen.getByText('5 次')).toBeTruthy()
-    // 会话总费用 0.3500（hero statNumber；按钮上同值出现两次）
-    expect(screen.getAllByText('0.3500').length).toBeGreaterThanOrEqual(2)
+    // 会话总费用 0.3500（hero statNumber；按钮上同值出现两次，带 ¥）
+    expect(screen.getAllByText('¥0.3500').length).toBeGreaterThanOrEqual(2)
     // 平均命中率 = 9000/10000 = 90.00%（metaValEmerald）
     expect(screen.getByText('90.00%')).toBeTruthy()
     // Tokens 合计 10500 → hero "10.5" + 单位 "K"
@@ -109,7 +109,7 @@ describe('SessionUsageButton', () => {
       state={baseState({
         open: true,
         perSession: session,
-        balance: { balance: null, currency: 'CNY', updatedAt: null, error: 'provider does not expose an endpoint', source: null, quota: null },
+        balance: { balance: null, currency: 'CNY', updatedAt: null, error: 'provider does not expose an endpoint', source: null, quota: null, costCurrency: 'CNY' },
       })}
       onToggle={() => {}}
     />)
@@ -127,7 +127,7 @@ describe('SessionUsageButton', () => {
       state={baseState({
         open: true,
         perSession: session,
-        balance: { balance: 5, currency: 'CNY', updatedAt: null, error: null, source: null, quota },
+        balance: { balance: 5, currency: 'CNY', updatedAt: null, error: null, source: null, quota, costCurrency: 'CNY' },
       })}
       onToggle={() => {}}
     />)
@@ -145,7 +145,7 @@ describe('SessionUsageButton', () => {
       state={baseState({
         open: true,
         perSession: session,
-        balance: { balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null },
+        balance: { balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' },
       })}
       onToggle={() => {}}
     />)

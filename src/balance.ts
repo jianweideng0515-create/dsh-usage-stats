@@ -22,21 +22,26 @@ export interface BalanceSnapshot {
   source: BalanceEndpoint | null
   /** OpenCode 等订阅制的配额百分比；金额型（DeepSeek）为 null。 */
   quota: UsageQuota | null
+  /** 费用计价货币（插件设置 currency；CNY 显示 ¥，USD 显示 $）。 */
+  costCurrency: string
 }
 
 /** 余额客户端的运行时依赖（测试可注入）。 */
 export interface BalanceClientDeps {
   fetchFn: typeof fetch
   getEnv: (name: string) => string | undefined
+  /** 费用计价货币（插件设置 currency 透传；缺省 CNY）。 */
+  getCostCurrency?: () => string
 }
 
-const FAIL = (error: string, source: BalanceEndpoint | null): BalanceSnapshot => ({
+const FAIL = (error: string, source: BalanceEndpoint | null, costCurrency = 'CNY'): BalanceSnapshot => ({
   balance: null,
   currency: 'CNY',
   updatedAt: null,
   error,
   source,
   quota: null,
+  costCurrency,
 })
 
 /** 解析 DeepSeek 兼容余额响应；格式不符返回 null。 */
@@ -84,24 +89,26 @@ export function parseOpenCodeUsage(body: unknown): UsageQuota | null {
 export class BalanceClient {
   private settings: BalanceSettings = { mode: 'off' }
   private detect: () => DetectResult = () => ({ ok: false, reason: 'disabled' })
-  private last: BalanceSnapshot = { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null }
+  private last: BalanceSnapshot = { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' }
 
   constructor(private readonly deps: BalanceClientDeps) {}
 
   setSettings(settings: BalanceSettings): void { this.settings = settings }
   setDetect(fn: () => DetectResult): void { this.detect = fn }
   snapshot(): BalanceSnapshot { return this.last }
+  /** 费用计价货币（设置 currency 实时读取）。 */
+  private costCurrency(): string { return this.deps.getCostCurrency?.() ?? 'CNY' }
 
   async refresh(): Promise<BalanceSnapshot> {
     const result = this.detect()
     if (!result.ok) {
-      this.last = FAIL(result.reason, null)
+      this.last = FAIL(result.reason, null, this.costCurrency())
       return this.last
     }
     const endpoint = result.endpoint
     const key = this.deps.getEnv(endpoint.apiKeyEnv)
     if (key === undefined || key === '') {
-      this.last = FAIL('missing API key', endpoint)
+      this.last = FAIL('missing API key', endpoint, this.costCurrency())
       return this.last
     }
     let response: Response
@@ -113,25 +120,25 @@ export class BalanceClient {
         signal: AbortSignal.timeout(10_000),
       })
     } catch (error) {
-      this.last = FAIL(`network error: ${String(error)}`, endpoint)
+      this.last = FAIL(`network error: ${String(error)}`, endpoint, this.costCurrency())
       return this.last
     }
     if (!response.ok) {
-      this.last = FAIL(`HTTP ${response.status}`, endpoint)
+      this.last = FAIL(`HTTP ${response.status}`, endpoint, this.costCurrency())
       return this.last
     }
     let body: unknown
     try {
       body = await response.json()
     } catch {
-      this.last = FAIL('unexpected response', endpoint)
+      this.last = FAIL('unexpected response', endpoint, this.costCurrency())
       return this.last
     }
     // 端点按路径区分：/usage 为 OpenCode 配额，/user/balance 为 DeepSeek 金额。
     if (endpoint.path.includes('/usage')) {
       const quota = parseOpenCodeUsage(body)
       if (quota === null) {
-        this.last = FAIL('unexpected response', endpoint)
+        this.last = FAIL('unexpected response', endpoint, this.costCurrency())
         return this.last
       }
       this.last = {
@@ -141,12 +148,13 @@ export class BalanceClient {
         error: null,
         source: endpoint,
         quota,
+        costCurrency: this.costCurrency(),
       }
       return this.last
     }
     const parsed = parseBalanceResponse(body)
     if (parsed === null) {
-      this.last = FAIL('unexpected response', endpoint)
+      this.last = FAIL('unexpected response', endpoint, this.costCurrency())
       return this.last
     }
     this.last = {
@@ -156,6 +164,7 @@ export class BalanceClient {
       error: null,
       source: endpoint,
       quota: null,
+      costCurrency: this.costCurrency(),
     }
     return this.last
   }
