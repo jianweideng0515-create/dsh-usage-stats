@@ -236,6 +236,8 @@ export function SessionUsageButton(props: {
   const recentTokens = session?.lastRequestTokens === null || session?.lastRequestTokens === undefined ? null : session.lastRequestTokens
   const recentTokensCompact = recentTokens === null ? null : formatCompactTokens(recentTokens)
   const balance = state.balance
+  // 有真实消耗但费用为 0：模型未配置单价（内置价格表外），费用按 0 计。
+  const unpriced = session !== null && session.cost === 0 && tokensTotal > 0
 
   const handleCopySummary = (): void => {
     const sessionText = session === null ? '' : `Tokens: ${tokensTotal} | Cost: ${session.cost.toFixed(4)}`
@@ -300,7 +302,7 @@ export function SessionUsageButton(props: {
                     </div>
                     <div className={styles.heroCol}>
                       <div className={styles.statNumGroup}>
-                        <span className={styles.statNumber}>{formatCost(session.cost)}</span>
+                        <span className={styles.statNumber}>{formatCost(session.cost)}{unpriced ? '*' : ''}</span>
                       </div>
                       <div className={styles.statLabel}>{t('session.heroCost')}</div>
                     </div>
@@ -324,8 +326,11 @@ export function SessionUsageButton(props: {
                 </div>
                 <div className={styles.recentCard}>
                   <div className={styles.recentRowTop}>
-                    <span className={styles.recentLabel}>{t('session.recentHit')}</span>
-                    <span className={styles.hitBadge}>{recentHit === null ? '-' : `${recentHit.toFixed(2)}%`}</span>
+                    <span className={styles.recentModel} title={session.lastModel ?? undefined}>{session.lastModel ?? '-'}</span>
+                    <span className={styles.recentHitGroup}>
+                      <span className={styles.recentHitLabel}>{t('session.recentHit')}</span>
+                      <span className={styles.hitBadge}>{recentHit === null ? '-' : `${recentHit.toFixed(2)}%`}</span>
+                    </span>
                   </div>
                   <div className={styles.recentRowBottom}>
                     <span>
@@ -336,6 +341,9 @@ export function SessionUsageButton(props: {
                     </span>
                   </div>
                 </div>
+                {unpriced ? (
+                  <p className={styles.unpricedHint}>{t('session.unpricedHint')}</p>
+                ) : null}
               </div>
             </div>
           ) : null}

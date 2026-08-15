@@ -19,6 +19,7 @@ export interface UsageStatsCopy {
   'session.copy': string
   'session.copied': string
   'session.balance': string
+  'session.unpricedHint': string
   'range.last7': string
   'range.last14': string
   'range.last30': string
@@ -102,6 +103,7 @@ export const zh: UsageStatsCopy = {
   'session.copy': '复制摘要',
   'session.copied': '已复制',
   'session.balance': '账户余额',
+  'session.unpricedHint': '* 该模型未配置单价，费用按 0 计（可在插件设置中配置价格）',
   'range.last7': '最近 7 天',
   'range.last14': '最近 14 天',
   'range.last30': '最近 30 天',
@@ -182,6 +184,7 @@ export const en: UsageStatsCopy = {
   'session.copy': 'Copy summary',
   'session.copied': 'Copied',
   'session.balance': 'Account balance',
+  'session.unpricedHint': '* Model has no configured price; cost counted as 0 (configure prices in plugin settings)',
   'range.last7': 'Last 7 days',
   'range.last14': 'Last 14 days',
   'range.last30': 'Last 30 days',

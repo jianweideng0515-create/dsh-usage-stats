@@ -1041,12 +1041,37 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
   font-size: 0.75rem;
 }
 
-.recentLabel {
-  color: var(--dsw-alias-label-secondary);
-  font-weight: 500;
+.recentModel {
+  color: var(--dsw-alias-label-primary);
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recentHitGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex: none;
+}
+
+.recentHitLabel {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 0.6875rem;
+  white-space: nowrap;
+}
+
+.unpricedHint {
+  margin: 0.375rem 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--dsw-alias-state-warn-primary);
 }
 
 .hitBadge {
