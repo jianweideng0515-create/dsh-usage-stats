@@ -121,4 +121,17 @@ describe('UsageStatsMeter', () => {
     meter.applyEvent('s1', null, ev('assistant/chunk', { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 1, outputTokens: 1 } } }))
     expect(meter.state().totals.cost).toBe(42)
   })
+
+  it('价格计算返回 NaN 时按 0 记账（不污染累计状态）', () => {
+    const meter = new UsageStatsMeter()
+    meter.setPriceResolver(() => Number.NaN)
+    meter.applyEvent('s1', null, ev('request/header', { header: { config: { provider: 'p', model: 'm' } }, reason: 'initial' }))
+    meter.applyEvent('s1', null, ev('step/start', { turn: 1, step: 1 }))
+    meter.applyEvent('s1', null, ev('assistant/chunk', { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 100, outputTokens: 10 } } }))
+    const s = meter.state()
+    expect(Number.isFinite(s.totals.cost)).toBe(true)
+    expect(s.totals.cost).toBe(0)
+    expect(Number.isFinite(s.sessions['s1'].cost)).toBe(true)
+    expect(Number.isFinite(s.sessions['s1'].lastRequestCost as number)).toBe(true)
+  })
 })

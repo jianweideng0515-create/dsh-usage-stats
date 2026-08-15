@@ -17,8 +17,10 @@ import { detectBalanceEndpoint } from './provider-detect.ts'
 export const name = 'usage-stats'
 
 // sessions 用于事件订阅；webServer 用于注册 /api/dsh-usage-stats/* 只读路由；
-// settings 经 installSettingsSection 内部的可选注入接入，故不在此声明。
-export const inject = ['sessions', 'webServer']
+// agentDefaultModel + llm 供余额端点自动推断（cordis 4 的 ctx 是 Proxy，
+// 未 inject 的服务即使存在也会在读取时抛错）；settings 经 installSettingsSection
+// 内部的可选注入接入，故不在此声明。
+export const inject = ['sessions', 'webServer', 'agentDefaultModel', 'llm']
 
 /** 宿主端在 ctx 上暴露 meter 的键（路由/余额任务读取）。 */
 export const USAGE_STATS_METER_KEY = Symbol('usage-stats.meter')
@@ -102,6 +104,9 @@ export function apply(ctx: Context, config: Config = {}): void {
     balance.setSettings(value)
     balance.setDetect(() => detectBalanceEndpoint(ctx, resolve().balance ?? { mode: 'auto' }))
   }
+  // 先同步检测配置再启动定时器：start() 会立即 refresh 一次，若检测闭包尚未
+  // 设置，首次快照会停留在默认的 disabled 状态（要等下一轮定时刷新才纠正）。
+  syncBalance()
   const stopBalance = balance.start(resolve().balance?.refreshMs ?? 600_000)
   ctx.effect(() => stopBalance, 'usage-stats: balance timer')
 

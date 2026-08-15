@@ -37,6 +37,20 @@ function isDeepSeekHost(hostname: string): boolean {
   return hostname === 'api.deepseek.com' || hostname.endsWith('.deepseek.com')
 }
 
+/**
+ * 安全读取 ctx 服务：cordis 4 的 ctx 是 Proxy，未注入的服务名即使存在也
+ * 会在属性读取时抛 "cannot get property X without inject"（可选链拦不住
+ * getter）。detect 的调用方可能持有一个未声明这些服务的 ctx（测试），
+ * 这里把读取失败视为服务缺失，返回 undefined 走 reason 分支。
+ */
+function serviceOrUndefined<T>(ctx: Context, name: string): T | undefined {
+  try {
+    return (ctx as unknown as Record<string, T>)[name]
+  } catch {
+    return undefined
+  }
+}
+
 /** 按给定配置与运行时服务解析出可用的余额端点。 */
 export function detectBalanceEndpoint(ctx: Context, settings: BalanceSettings): DetectResult {
   if (settings.mode === 'off') return { ok: false, reason: 'disabled' }
@@ -55,16 +69,19 @@ export function detectBalanceEndpoint(ctx: Context, settings: BalanceSettings): 
     }
   }
 
-  // auto：按当前默认 provider 推断；三个服务均可能是缺省 ctx 上的可选成员。
-  const selection = ctx.agentDefaultModel?.currentSelection()
+  // auto：按当前默认 provider 推断；三个服务均可能缺失（未注入或未挂载）。
+  const agentDefaultModel = serviceOrUndefined<{ currentSelection(): { provider: string; model: string } }>(ctx, 'agentDefaultModel')
+  const selection = agentDefaultModel?.currentSelection()
   if (selection === undefined) return { ok: false, reason: 'no default model selection' }
   const provider = selection.provider
-  const entries = ctx.llm?.listConfigurableProviders() ?? []
+  const llm = serviceOrUndefined<{ listConfigurableProviders(): Array<{ provider: string; settingsNs: string; settingsPath: readonly string[] }> }>(ctx, 'llm')
+  const entries = llm?.listConfigurableProviders() ?? []
   const entry = entries.find((e) => e.provider === provider)
   if (entry === undefined) return { ok: false, reason: `provider ${provider} not found` }
 
   // 从命名空间取值，沿 settingsPath 逐层取 profile（任一层非对象即视为不可用）。
-  const raw = ctx.settings?.get(settingsNamespace(entry.settingsNs))
+  const settingsService = serviceOrUndefined<{ get(ns: unknown): unknown }>(ctx, 'settings')
+  const raw = settingsService?.get(settingsNamespace(entry.settingsNs))
   let profile: unknown = raw
   for (const key of entry.settingsPath) {
     if (typeof profile !== 'object' || profile === null) { profile = undefined; break }

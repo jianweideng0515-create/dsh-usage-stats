@@ -28,11 +28,20 @@ function meterOf(fiberCtx: Context): UsageStatsMeter {
 async function startPlugin(config: Partial<Config>): Promise<{ ctx: Context; fiber: Fiber }> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
-  // 插件 inject 声明 webServer；单测不启动真实网关，提供最小伪服务以通过依赖解析。
+  // 插件 inject 声明 webServer/agentDefaultModel/llm；单测不启动真实服务，
+  // 提供最小伪服务以通过依赖解析与 cordis 的注入检查。
   const fakeWebServer = {
     register: (_route: WebRoute): (() => void) => () => undefined,
   }
+  const fakeAgentDefaultModel = {
+    currentSelection: () => ({ provider: 'opencode-go', model: 'deepseek-v4-flash' }),
+  }
+  const fakeLlm = {
+    listConfigurableProviders: () => [],
+  }
   ctx.provide('webServer' as never, fakeWebServer as never)
+  ctx.provide('agentDefaultModel' as never, fakeAgentDefaultModel as never)
+  ctx.provide('llm' as never, fakeLlm as never)
   const fiber = await ctx.plugin({ inject, apply }, config)
   return { ctx, fiber }
 }

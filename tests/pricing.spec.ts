@@ -53,6 +53,26 @@ describe('priceBuckets', () => {
     )
     expect(cost).toBe(1)
   })
+
+  it('defaultPrice 为空对象（schemastery 未配置解析结果）时返回 0 而非 NaN', () => {
+    // 回归：schemastery 对未配置的对象字段解析为空对象 {}（truthy），旧实现
+    // 会继续用 price.input（undefined）参与乘法得到 NaN，NaN 经 JSON 序列化
+    // 为 null，污染持久化的 cost 字段。
+    const prices = resolvePrices()
+    const cost = priceBuckets(
+      'unknown-model',
+      {
+        uncachedInputTokens: 1_000_000,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        outputTokens: 0,
+      },
+      prices,
+      {} as { input: number; cacheRead: number; cacheWrite: number; output: number },
+    )
+    expect(Number.isFinite(cost)).toBe(true)
+    expect(cost).toBe(0)
+  })
 })
 
 describe('resolvePrices', () => {

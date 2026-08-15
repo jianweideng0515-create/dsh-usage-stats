@@ -175,7 +175,10 @@ export class UsageStatsMeter {
       outputTokens: usage.outputTokens,
     }
     const model = fold.currentModel ?? UNKNOWN_MODEL
-    const cost = this.getPrice(model, buckets)
+    const rawCost = this.getPrice(model, buckets)
+    // 双保险：价格计算异常（如默认价空对象）可能返回 NaN，NaN 会污染累计
+    // 状态并随 JSON 序列化为 null——任何非有限费用一律按 0 记账。
+    const cost = Number.isFinite(rawCost) ? rawCost : 0
     const rate = hitRateOf(buckets)
     const prev = fold.pending
     if (prev !== null && prev.turn === turn && prev.step === step) {

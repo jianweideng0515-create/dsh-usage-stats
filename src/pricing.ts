@@ -38,6 +38,10 @@ export function resolvePrices(
 /**
  * 按每百万 token 单价估算一次用量的费用。各分项除以 1e6 后乘以对应单价，
  * 四项累加。未知模型且未提供兜底价时返回 0。
+ *
+ * 防御：defaultPrice 可能是 schemastery 对未配置对象字段解析出的空对象 {}，
+ * 其单价字段为 undefined，直接参与乘法会产生 NaN 污染累计状态（NaN 经
+ * JSON 序列化为 null）——空对象、缺失或非有限单价一律视为无价格，返回 0。
  */
 export function priceBuckets(
   model: string,
@@ -46,12 +50,16 @@ export function priceBuckets(
   defaultPrice?: ModelPrice,
 ): number {
   const price = prices[model] ?? defaultPrice
-  if (!price) return 0
+  if (price === undefined || price === null || typeof price !== 'object') return 0
+  const { input, cacheRead, cacheWrite, output } = price
+  if (!Number.isFinite(input) || !Number.isFinite(cacheRead) || !Number.isFinite(cacheWrite) || !Number.isFinite(output)) {
+    return 0
+  }
   const perMillion = 1e6
   return (
-    (buckets.uncachedInputTokens / perMillion) * price.input +
-    (buckets.cacheReadTokens / perMillion) * price.cacheRead +
-    (buckets.cacheWriteTokens / perMillion) * price.cacheWrite +
-    (buckets.outputTokens / perMillion) * price.output
+    (buckets.uncachedInputTokens / perMillion) * input +
+    (buckets.cacheReadTokens / perMillion) * cacheRead +
+    (buckets.cacheWriteTokens / perMillion) * cacheWrite +
+    (buckets.outputTokens / perMillion) * output
   )
 }
