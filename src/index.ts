@@ -10,6 +10,9 @@ import { priceBuckets, resolvePrices } from './pricing.ts'
 import type { ModelPrice } from './pricing.ts'
 import { UsageStatsStore } from './store.ts'
 import { makeRoutes } from './routes.ts'
+import { BalanceClient } from './balance.ts'
+import type { BalanceSettings } from './provider-detect.ts'
+import { detectBalanceEndpoint } from './provider-detect.ts'
 
 export const name = 'usage-stats'
 
@@ -33,6 +36,8 @@ export interface Config {
   defaultPrice?: ModelPrice
   /** 计价货币显示名，默认 CNY。 */
   currency?: string
+  /** 余额拉取配置；缺省 auto 自动推断。 */
+  balance?: BalanceSettings
 }
 
 const priceSchema = z.object({
@@ -49,6 +54,13 @@ export const Config: z<Config> = z.object({
   prices: z.dict(priceSchema),
   defaultPrice: priceSchema,
   currency: z.string().default('CNY'),
+  balance: z.object({
+    mode: z.union([z.const('auto'), z.const('manual'), z.const('off')]).default('auto'),
+    baseUrl: z.string(),
+    path: z.string(),
+    apiKeyEnv: z.string(),
+    refreshMs: z.number().min(1000),
+  }),
 })
 
 const SAVE_DEBOUNCE_MS = 30_000
@@ -76,6 +88,22 @@ export function apply(ctx: Context, config: Config = {}): void {
       ...value,
     }
   }
+
+  // 余额客户端与定时器：apply 顶层创建一次，跨 mount 保持运行；热更新只改
+  // settings/detect（mount 内调用），不重建定时器。整体 dispose 时经效应清理。
+  // llm/agentDefaultModel 不注入（硬依赖会挂起测试），apply 内用可选链访问；
+  // 缺失时 detectBalanceEndpoint 返回 reason。fetch 用全局 fetch，key 从环境变量读。
+  const balance = new BalanceClient({
+    fetchFn: fetch,
+    getEnv: (name) => process.env[name],
+  })
+  const syncBalance = (): void => {
+    const value = resolve().balance ?? { mode: 'auto' }
+    balance.setSettings(value)
+    balance.setDetect(() => detectBalanceEndpoint(ctx, resolve().balance ?? { mode: 'auto' }))
+  }
+  const stopBalance = balance.start(resolve().balance?.refreshMs ?? 600_000)
+  ctx.effect(() => stopBalance, 'usage-stats: balance timer')
 
   const syncPrices = (target: UsageStatsMeter): void => {
     const value = resolve()
@@ -120,6 +148,7 @@ export function apply(ctx: Context, config: Config = {}): void {
       meter.restore(loaded)
     }
     syncPrices(meter)
+    syncBalance()
     lastFlushSave = 0
 
     // 订阅全局会话事件：实时累计并排期写盘。
@@ -137,7 +166,7 @@ export function apply(ctx: Context, config: Config = {}): void {
     const offEvent = ctx.on('session/event', onEvent, { global: true })
     const offFlush = ctx.on('session/flush', onFlush, { global: true })
     // 路由 handler 运行时从 ctx 读当前 meter，故注册一次即可随重挂载取到最新状态。
-    const routes = makeRoutes(ctx)
+    const routes = makeRoutes(ctx, balance)
     const routeDisposers = routes.map((route) => ctx.webServer.register(route))
     // 卸载时落盘一次（含正常 dispose 的最终写盘）。
     const disposeEffect = ctx.effect(() => () => {

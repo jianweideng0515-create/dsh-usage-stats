@@ -4,6 +4,7 @@ import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import { USAGE_STATS_METER_KEY } from './index.ts'
 import { parseRange, summarizeRange } from './query.ts'
 import type { UsageStatsMeter } from './meter.ts'
+import type { BalanceClient } from './balance.ts'
 
 /** Loopback literal check plus browser same-origin markers (mirrors the pairing routes' fence). */
 export function isLoopbackRequest(request: IncomingMessage): boolean {
@@ -48,7 +49,7 @@ function latestActiveSession(meter: UsageStatsMeter) {
 }
 
 /** 构造 usage-stats 全部只读路由（loopback 围栏，全部先过 isLoopbackRequest）。 */
-export function makeRoutes(ctx: Context): WebRoute[] {
+export function makeRoutes(ctx: Context, balance: BalanceClient): WebRoute[] {
   const summary: WebRoute = {
     kind: 'exact',
     path: '/api/dsh-usage-stats/summary',
@@ -88,26 +89,27 @@ export function makeRoutes(ctx: Context): WebRoute[] {
     },
   }
 
-  // GET /balance 与 POST /balance/refresh：Task 6 替换为真实取数，本任务返回占位。
-  const balance: WebRoute = {
+  // GET /balance：返回最近一次余额快照（定时器维护）。
+  const balanceRoute: WebRoute = {
     kind: 'exact',
     path: '/api/dsh-usage-stats/balance',
     handler: (req, res) => {
       if (!isLoopbackRequest(req)) { writeJson(res, 403, { error: 'forbidden' }); return }
       if (req.method !== 'GET') { writeJson(res, 405, { error: 'method not allowed' }); return }
-      writeJson(res, 200, { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null })
+      writeJson(res, 200, balance.snapshot())
     },
   }
 
-  const refresh: WebRoute = {
+  // POST /balance/refresh：立即重新拉取一次余额。
+  const refreshBalance: WebRoute = {
     kind: 'exact',
     path: '/api/dsh-usage-stats/balance/refresh',
-    handler: (req, res) => {
+    handler: async (req, res) => {
       if (!isLoopbackRequest(req)) { writeJson(res, 403, { error: 'forbidden' }); return }
       if (req.method !== 'POST') { writeJson(res, 405, { error: 'method not allowed' }); return }
-      writeJson(res, 200, { balance: null, currency: 'CNY', updatedAt: null, error: null, source: null })
+      writeJson(res, 200, await balance.refresh())
     },
   }
 
-  return [summary, session, balance, refresh]
+  return [summary, session, balanceRoute, refreshBalance]
 }
