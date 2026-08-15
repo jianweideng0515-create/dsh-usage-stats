@@ -1681,7 +1681,7 @@
 /* DeepSeek 卡操作行：充值（主按钮）+ 刷新 */
 .deepseekActions {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 0.5rem;
   margin-top: 0.25rem;
 }
