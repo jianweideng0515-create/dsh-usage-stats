@@ -326,7 +326,8 @@ function TrendAreaChart(props: {
   if (series.length < 2) {
     return <p className={styles.status}>{t('chart.insufficientData')}</p>
   }
-  const axisMax = niceAxisMax(Math.max(...series.map((p) => p.tokens), 1e-9))
+  // Y 轴上限：数据最大值放大到 1/0.8 后取整，最高柱占纵轴高度 ≤ 80%（顶部留白更舒展）
+  const axisMax = niceAxisMax(Math.max(...series.map((p) => p.tokens), 1e-9) / 0.8)
   const innerH = height - padY * 2
   const y = (v: number): number => padY + innerH - (v / axisMax) * innerH
   // Y 轴刻度：0 / 25% / 50% / 75% / 100% × axisMax
