@@ -12,7 +12,7 @@ const session: PerSession = {
   turns: 5, requests: 12, cost: 0.35,
   uncachedInputTokens: 1000, cacheReadTokens: 9000, cacheWriteTokens: 0, outputTokens: 500,
   lastRequestAt: null, lastModel: 'deepseek-chat',
-  lastRequestCost: 0.05, lastRequestHitRate: 0.4,
+  lastRequestCost: 0.05, lastRequestHitRate: 0.4, lastRequestTokens: 1200,
 }
 
 function baseState(overrides: Partial<SessionUsageStore> = {}): SessionUsageStore {
@@ -46,17 +46,20 @@ describe('SessionUsageButton', () => {
       onToggle={() => {}}
     />)
     expect(screen.getByRole('button', { expanded: true })).toBeTruthy()
-    // 本次命中 40.00%；本次费用 0.0500
+    // 状态徽标
+    expect(screen.getByText('session.statusOk')).toBeTruthy()
+    // 本次命中 40.00%（hitBadge）；本次费用 0.0500（strongText）
     expect(screen.getByText('40.00%')).toBeTruthy()
     expect(screen.getByText('0.0500')).toBeTruthy()
-    // 完成轮次 / 会话轮次（turns=5 出现两次）
-    expect(screen.getAllByText('5').length).toBeGreaterThanOrEqual(2)
-    // 会话费用 0.3500
-    expect(screen.getByText('0.3500')).toBeTruthy()
-    // 平均命中率 = 9000/10000 = 90.00%
+    // 完成轮次：metaValText "5 次"
+    expect(screen.getByText('5 次')).toBeTruthy()
+    // 会话总费用 0.3500（hero statNumber；按钮上同值出现两次）
+    expect(screen.getAllByText('0.3500').length).toBeGreaterThanOrEqual(2)
+    // 平均命中率 = 9000/10000 = 90.00%（metaValEmerald）
     expect(screen.getByText('90.00%')).toBeTruthy()
-    // Tokens 合计 10.5K
-    expect(screen.getByText('10.5K')).toBeTruthy()
+    // Tokens 合计 10500 → hero "10.5" + 单位 "K"
+    expect(screen.getByText('10.5')).toBeTruthy()
+    expect(screen.getByText('K')).toBeTruthy()
     // 余额
     expect(screen.getByText(/12\.34 CNY/)).toBeTruthy()
   })

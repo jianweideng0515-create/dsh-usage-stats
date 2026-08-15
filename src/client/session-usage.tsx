@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
@@ -138,7 +138,67 @@ export class SessionUsageController {
   }
 }
 
-/** 受控的用量按钮 + 展开面板（点击面板外部关闭）。 */
+/** 触发按钮图标（内联 SVG，无外部依赖）。 */
+function ChevronDownIcon(props: { open: boolean }): ReactElement {
+  return (
+    <svg
+      className={props.open ? styles.chevronOpen : styles.chevronIcon}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
+function CheckCircleIcon(): ReactElement {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <path d="m9 11 3 3L22 4" />
+    </svg>
+  )
+}
+
+function CopyIcon(): ReactElement {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </svg>
+  )
+}
+
+function CheckIcon(): ReactElement {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
+/** 脉冲状态点（绿色呼吸动画）。 */
+function PulseDot(): ReactElement {
+  return (
+    <span className={styles.pulseDotContainer}>
+      <span className={styles.pulseDotPing} />
+      <span className={styles.pulseDot} />
+    </span>
+  )
+}
+
+/** 自适应 token 缩写：≥1M 用 M，否则 K。 */
+function formatCompactTokens(tokens: number): { value: string; unit: string } {
+  if (tokens >= 1_000_000) return { value: (tokens / 1_000_000).toFixed(2), unit: 'M' }
+  if (tokens >= 1_000) return { value: (tokens / 1_000).toFixed(1), unit: 'K' }
+  return { value: String(tokens), unit: '' }
+}
+
+/** 受控的用量按钮 + 展开面板（外部点击 / Escape 关闭）。 */
 export function SessionUsageButton(props: {
   t: (key: string) => string
   state: SessionUsageStore
@@ -146,22 +206,50 @@ export function SessionUsageButton(props: {
 }): ReactElement {
   const { t, state, onToggle } = props
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const [copied, setCopied] = useState(false)
 
-  // 点击面板外部关闭（按钮自身除外）
+  // 点击面板外部关闭 + Escape 关闭
   useEffect(() => {
     if (!state.open) return
     const onPointerDown = (event: PointerEvent): void => {
       const target = event.target as Node
       if (rootRef.current !== null && !rootRef.current.contains(target)) onToggle()
     }
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') onToggle()
+    }
     document.addEventListener('pointerdown', onPointerDown)
-    return () => document.removeEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
   }, [state.open, onToggle])
 
   const session = state.perSession
   const tokensTotal = session === null
     ? 0
     : session.uncachedInputTokens + session.cacheReadTokens + session.cacheWriteTokens + session.outputTokens
+  const tokens = formatCompactTokens(tokensTotal)
+  const avgHit = session === null ? 0 : sessionHitRate(session) * 100
+  const recentHit = session?.lastRequestHitRate === null || session?.lastRequestHitRate === undefined ? null : session.lastRequestHitRate * 100
+  const recentTokens = session?.lastRequestTokens === null || session?.lastRequestTokens === undefined ? null : session.lastRequestTokens
+  const recentTokensCompact = recentTokens === null ? null : formatCompactTokens(recentTokens)
+  const balance = state.balance
+
+  const handleCopySummary = (): void => {
+    const sessionText = session === null ? '' : `Tokens: ${tokensTotal} | Cost: ${session.cost.toFixed(4)}`
+    const summaryText = [
+      sessionText,
+      `Balance: ${balance?.balance === null || balance === null ? '-' : `${balance.balance} ${balance.currency}`}`,
+      `Avg Cache Hit: ${avgHit.toFixed(2)}%`,
+    ].filter(Boolean).join(' | ')
+    if (navigator.clipboard?.writeText !== undefined) {
+      void navigator.clipboard.writeText(summaryText)
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1600)
+  }
 
   return (
     <div className={styles.sessionUsageRoot} ref={rootRef}>
@@ -169,43 +257,102 @@ export function SessionUsageButton(props: {
         type="button"
         className={state.open ? styles.sessionUsageActive : styles.sessionUsage}
         aria-expanded={state.open}
+        aria-haspopup="true"
         onClick={onToggle}
       >
-        {t('session.usage')}
+        <PulseDot />
+        <span className={styles.labelMuted}>{t('session.usageLabel')}</span>
+        <span className={styles.valHighlightTokens}>{tokens.value}{tokens.unit}</span>
+        <span className={styles.valSeparator}>|</span>
+        <span className={styles.valHighlightCost}>{session === null ? '-' : formatCost(session.cost)}</span>
+        <ChevronDownIcon open={state.open} />
       </button>
       {state.open ? (
-        <div className={styles.sessionUsagePanel} role="dialog" aria-label={t('session.usage')}>
-          {state.loading && session === null ? <p className={styles.status}>{t('loading')}</p> : null}
-          {state.error !== null ? <p className={styles.status}>{t('error')}: {state.error}</p> : null}
+        <div className={styles.sessionUsagePanel} role="dialog" aria-label={t('session.panelTitle')}>
+          {/* Header：标题 + 服务状态 */}
+          <div className={styles.panelHeader}>
+            <div className={styles.panelTitleGroup}>
+              <PulseDot />
+              <span className={styles.panelTitle}>{t('session.panelTitle')}</span>
+            </div>
+            <span className={styles.statusBadge}>
+              <CheckCircleIcon />
+              {t('session.statusOk')}
+            </span>
+          </div>
+          {state.loading && session === null ? <p className={styles.panelStatus}>{t('loading')}</p> : null}
+          {state.error !== null ? <p className={styles.panelStatus}>{t('error')}: {state.error}</p> : null}
           {session !== null ? (
-            <>
-              <div className={styles.sessionUsageGroup}>
-                <span className={styles.sessionUsageGroupTitle}>{t('session.group.request')}</span>
-                <dl className={styles.sessionUsageMetrics}>
-                  <div><dt>{t('metric.lastHit')}</dt><dd>{session.lastRequestHitRate === null ? '-' : formatRate(session.lastRequestHitRate)}</dd></div>
-                  <div><dt>{t('metric.lastCost')}</dt><dd>{session.lastRequestCost === null ? '-' : formatCost(session.lastRequestCost)}</dd></div>
-                </dl>
+            <div className={styles.panelBody}>
+              {/* Hero 卡：会话累计消耗（对称 2×2） */}
+              <div>
+                <div className={styles.sectionHeader}>
+                  <span className={styles.sectionTitle}>{t('session.heroTitle')}</span>
+                </div>
+                <div className={styles.heroCard}>
+                  <div className={styles.heroTopGrid}>
+                    <div className={styles.heroCol}>
+                      <div className={styles.statNumGroup}>
+                        <span className={styles.statNumber}>{tokens.value}</span>
+                        <span className={styles.statUnit}>{tokens.unit}</span>
+                      </div>
+                      <div className={styles.statLabel}>{t('session.heroTokens')}</div>
+                    </div>
+                    <div className={styles.heroCol}>
+                      <div className={styles.statNumGroup}>
+                        <span className={styles.statNumber}>{formatCost(session.cost)}</span>
+                      </div>
+                      <div className={styles.statLabel}>{t('session.heroCost')}</div>
+                    </div>
+                  </div>
+                  <div className={styles.heroBottomGrid}>
+                    <div className={styles.metaCol}>
+                      <span className={styles.metaLabel}>{t('session.heroRounds')}</span>
+                      <span className={styles.metaValText}>{session.turns} 次</span>
+                    </div>
+                    <div className={styles.metaCol}>
+                      <span className={styles.metaLabel}>{t('session.heroAvgHit')}</span>
+                      <span className={styles.metaValEmerald}>{avgHit.toFixed(2)}%</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className={styles.sessionUsageGroup}>
-                <span className={styles.sessionUsageGroupTitle}>{t('session.group.session')}</span>
-                <dl className={styles.sessionUsageMetrics}>
-                  <div><dt>{t('metric.turns')}</dt><dd>{session.turns}</dd></div>
-                  <div><dt>{t('metric.sessionTurns')}</dt><dd>{session.turns}</dd></div>
-                  <div><dt>{t('metric.sessionCost')}</dt><dd>{formatCost(session.cost)}</dd></div>
-                  <div><dt>{t('metric.avgHitRate')}</dt><dd>{formatRate(sessionHitRate(session))}</dd></div>
-                  <div><dt>{t('metric.tokens')}</dt><dd className={styles.highlight}>{formatTokens(tokensTotal)}</dd></div>
-                </dl>
+              {/* 最近单次请求卡 */}
+              <div>
+                <div className={styles.sectionTitle} style={{ marginBottom: '6px' }}>
+                  {t('session.recentTitle')}
+                </div>
+                <div className={styles.recentCard}>
+                  <div className={styles.recentRowTop}>
+                    <span className={styles.recentLabel}>{t('session.recentHit')}</span>
+                    <span className={styles.hitBadge}>{recentHit === null ? '-' : `${recentHit.toFixed(2)}%`}</span>
+                  </div>
+                  <div className={styles.recentRowBottom}>
+                    <span>
+                      {t('session.recentTokens')}: <strong className={styles.strongText}>{recentTokensCompact === null ? '-' : `${recentTokensCompact.value}${recentTokensCompact.unit} Tokens`}</strong>
+                    </span>
+                    <span>
+                      {t('session.recentCost')}: <strong className={styles.strongText}>{session.lastRequestCost === null ? '-' : formatCost(session.lastRequestCost)}</strong>
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className={styles.sessionUsageGroup}>
-                <span className={styles.sessionUsageGroupTitle}>{t('session.group.account')}</span>
-                <dl className={styles.sessionUsageMetrics}>
-                  <div><dt>{t('balance.title')}</dt><dd className={state.balance !== null && state.balance.balance !== null ? styles.highlight : undefined}>{state.balance === null ? '-' : state.balance.balance === null
-                    ? (state.balance.error ?? t('balance.unavailable'))
-                    : `${state.balance.balance} ${state.balance.currency}`}</dd></div>
-                </dl>
-              </div>
-            </>
+            </div>
           ) : null}
+          {/* Footer：账户余额 + 复制摘要 */}
+          <div className={styles.panelFooter}>
+            <div className={styles.footerFlex}>
+              <span className={styles.balanceText}>
+                {t('session.balance')}: <strong className={styles.balanceVal}>{balance === null ? '-' : balance.balance === null
+                  ? (balance.error ?? t('balance.unavailable'))
+                  : `${balance.balance} ${balance.currency}`}</strong>
+              </span>
+              <button type="button" onClick={handleCopySummary} className={`${styles.btnCopy} ${copied ? styles.btnCopyCopied : ''}`}>
+                {copied ? <CheckIcon /> : <CopyIcon />}
+                <span>{copied ? t('session.copied') : t('session.copy')}</span>
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </div>

@@ -37,6 +37,8 @@ export interface PerSession {
   lastModel: string | null
   lastRequestCost: number | null
   lastRequestHitRate: number | null
+  /** 最近一次有 usage 的请求的 token 合计。 */
+  lastRequestTokens: number | null
 }
 
 export interface SummaryResponse {

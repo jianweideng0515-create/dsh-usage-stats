@@ -727,150 +727,403 @@
   min-width: 0;
 }
 
-/* 会话页用量按钮 + 下拉面板 */
+/* 会话页用量按钮 + 下拉面板（复刻参考设计，颜色映射 DSH 主题变量） */
 
 .sessionUsageRoot {
   position: relative;
   display: inline-block;
+  text-align: left;
 }
 
+/* --- 触发按钮 --- */
 .sessionUsage,
 .sessionUsageActive {
-  font: inherit;
-  font-size: 12px;
-  padding: 3px 10px;
-  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l2);
-  background: transparent;
   color: var(--dsw-alias-label-secondary);
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.13s, border-color 0.13s, color 0.13s;
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.08);
 }
 
 .sessionUsage:hover {
-  color: var(--dsw-alias-label-primary);
+  background-color: var(--dsw-alias-interactive-bg-hover);
   border-color: var(--dsw-alias-label-dimmed);
-  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 .sessionUsage:focus-visible,
 .sessionUsageActive:focus-visible {
   outline: 2px solid var(--dsw-alias-state-business-primary);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 .sessionUsageActive {
-  border-color: var(--dsw-alias-button-info-fill);
-  background: var(--dsw-alias-button-info-fill);
-  color: var(--dsw-alias-label-primary-foreground);
+  border-color: var(--dsw-alias-state-business-primary);
 }
 
+/* 脉冲状态点 */
+.pulseDotContainer {
+  position: relative;
+  display: flex;
+  height: 0.5rem;
+  width: 0.5rem;
+}
+
+.pulseDotPing {
+  animation: usagePing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  position: absolute;
+  display: inline-flex;
+  height: 100%;
+  width: 100%;
+  border-radius: 9999px;
+  background-color: var(--dsw-alias-state-success-primary);
+  opacity: 0.75;
+}
+
+.pulseDot {
+  position: relative;
+  display: inline-flex;
+  border-radius: 9999px;
+  height: 0.5rem;
+  width: 0.5rem;
+  background-color: var(--dsw-alias-state-success-primary);
+}
+
+@keyframes usagePing {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.labelMuted {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.valHighlightTokens {
+  font-weight: 700;
+  color: var(--dsw-alias-label-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.valHighlightCost {
+  color: var(--dsw-alias-state-success-primary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.valSeparator {
+  color: var(--dsw-alias-label-dimmed);
+}
+
+.chevronIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--dsw-alias-label-tertiary);
+  transition: transform 0.2s ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* --- 下拉面板 --- */
 .sessionUsagePanel {
   position: absolute;
-  top: calc(100% + 8px);
   right: 0;
-  /* 高于会话头部其他浮层（模型选择等）；宽度防溢出视口 */
-  z-index: 100;
-  width: 272px;
+  margin-top: 0.5rem;
+  width: 330px;
   max-width: calc(100vw - 32px);
-  padding: 12px 14px 12px;
+  background-color: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-primary);
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgb(2 6 23 / 0.5), 0 8px 10px -6px rgb(2 6 23 / 0.3);
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 10px;
-  /* 浮层面板用更高一级背景，与头部条拉开层级 */
-  background: var(--dsw-alias-bg-layer-3);
-  box-shadow: 0 10px 28px rgb(0 0 0 / 0.32);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  /* 指向按钮的小箭头 */
-  animation: usagePanelIn 150ms ease-out;
+  overflow: hidden;
+  z-index: 100;
+  animation: usagePanelEnter 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.sessionUsagePanel::before {
-  content: '';
-  position: absolute;
-  top: -6px;
-  right: 20px;
-  width: 10px;
-  height: 10px;
-  border-left: 1px solid var(--dsw-alias-border-l2);
-  border-top: 1px solid var(--dsw-alias-border-l2);
-  background: var(--dsw-alias-bg-layer-3);
-  transform: rotate(45deg);
-}
-
-@keyframes usagePanelIn {
+@keyframes usagePanelEnter {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(-8px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
-.sessionUsageGroup {
+.panelHeader {
+  padding: 0.75rem 1rem;
+  background-color: var(--dsw-alias-bg-layer-3);
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panelTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.panelTitle {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--dsw-alias-label-primary);
+  letter-spacing: -0.01em;
+}
+
+.statusBadge {
+  font-size: 0.625rem;
+  background-color: color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent);
+  color: var(--dsw-alias-state-success-primary);
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-state-success-primary) 30%, transparent);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.panelBody {
+  padding: 0.875rem;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-width: 0;
+  gap: 0.75rem;
 }
 
-/* 分组分隔：首组无上边线，后续组用细线隔开 */
-.sessionUsageGroup + .sessionUsageGroup {
-  border-top: 1px solid var(--dsw-alias-border-l2);
-  padding-top: 10px;
-}
-
-.sessionUsageGroupTitle {
-  font-size: 11px;
-  font-weight: 600;
+.panelStatus {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-size: 12px;
   color: var(--dsw-alias-label-secondary);
-  letter-spacing: 0.04em;
 }
 
-.sessionUsageMetrics {
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.375rem;
+}
+
+.sectionTitle {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--dsw-alias-label-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Hero 卡：会话累计消耗（对称 2×2） */
+.heroCard {
+  background: linear-gradient(180deg, var(--dsw-alias-bg-layer-2) 0%, color-mix(in srgb, var(--dsw-alias-bg-layer-2) 55%, transparent) 100%);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.08);
+}
+
+.heroTopGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 16px;
-  margin: 0;
-  min-width: 0;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  padding-bottom: 0.625rem;
+  text-align: center;
 }
 
-.sessionUsageMetrics > div {
-  min-width: 0;
+.heroCol {
+  padding: 0 0.5rem;
 }
 
-.sessionUsageMetrics dt {
-  font-size: 11px;
+.heroCol:first-child {
+  border-right: 1px solid var(--dsw-alias-border-l2);
+}
+
+.statNumGroup {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.statNumber {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--dsw-alias-label-primary);
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+.statUnit {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dsw-alias-label-secondary);
+  margin-left: 0.125rem;
+}
+
+.statLabel {
+  font-size: 0.6875rem;
+  color: var(--dsw-alias-label-secondary);
+  margin-top: 0.125rem;
+  font-weight: 500;
+}
+
+.heroBottomGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-top: 0.625rem;
+  font-size: 0.6875rem;
+  text-align: center;
+}
+
+.metaCol {
+  padding: 0 0.5rem;
+}
+
+.metaCol:first-child {
+  border-right: 1px solid color-mix(in srgb, var(--dsw-alias-border-l2) 60%, transparent);
+}
+
+.metaLabel {
   color: var(--dsw-alias-label-tertiary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: block;
+  font-size: 0.625rem;
+  line-height: 1;
+  margin-bottom: 0.25rem;
 }
 
-.sessionUsageMetrics dd {
-  margin: 0;
-  font-size: 13px;
+.metaValText {
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.metaValEmerald {
+  font-weight: 600;
+  color: var(--dsw-alias-state-success-primary);
+}
+
+/* 最近单次请求卡 */
+.recentCard {
+  background-color: var(--dsw-alias-bg-layer-3);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 0.75rem;
+  padding: 0.625rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.recentRowTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+
+.recentLabel {
+  color: var(--dsw-alias-label-secondary);
+  font-weight: 500;
+}
+
+.hitBadge {
+  background-color: color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent);
+  color: var(--dsw-alias-state-success-primary);
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-state-success-primary) 30%, transparent);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.recentRowBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  color: var(--dsw-alias-label-secondary);
+  padding-top: 0.375rem;
+  border-top: 1px solid var(--dsw-alias-border-l2);
+  gap: 0.5rem;
+}
+
+.strongText {
+  color: var(--dsw-alias-label-primary);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--dsw-alias-label-primary);
-  white-space: nowrap;
+}
+
+/* Footer：余额 + 复制摘要 */
+.panelFooter {
+  padding: 0.625rem 0.875rem;
+  background-color: color-mix(in srgb, var(--dsw-alias-bg-layer-2) 70%, transparent);
+  border-top: 1px solid var(--dsw-alias-border-l2);
+  font-size: 0.75rem;
+}
+
+.footerFlex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.balanceText {
+  font-size: 0.6875rem;
+  color: var(--dsw-alias-label-secondary);
+  font-weight: 500;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* 关键数值（Tokens 总量、账户余额）强调：加大并提升明度 */
-.sessionUsageMetrics dd.highlight {
-  font-size: 14px;
-  font-weight: 700;
+.balanceVal {
   color: var(--dsw-alias-label-primary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.sessionUsageMetrics dd.highlightOk {
-  font-size: 14px;
-  font-weight: 700;
+.btnCopy {
+  font: inherit;
+  font-size: 0.625rem;
+  color: var(--dsw-alias-label-secondary);
+  background-color: var(--dsw-alias-bg-layer-3);
+  border: 1px solid var(--dsw-alias-border-l2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: none;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.08);
+}
+
+.btnCopy:hover {
+  color: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-label-dimmed);
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+.btnCopyCopied {
+  background-color: color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent);
+  border-color: color-mix(in srgb, var(--dsw-alias-state-success-primary) 45%, transparent);
   color: var(--dsw-alias-state-success-primary);
 }
 
@@ -879,10 +1132,16 @@
   .bar,
   .barValue,
   .sessionUsage,
-  .sessionUsageActive {
+  .sessionUsageActive,
+  .chevronIcon,
+  .btnCopy {
     transition: none;
   }
   .sessionUsagePanel {
     animation: none;
+  }
+  .pulseDotPing {
+    animation: none;
+    opacity: 0;
   }
 }

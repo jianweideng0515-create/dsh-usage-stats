@@ -43,6 +43,8 @@ export interface SessionRecord {
   lastModel: string | null
   lastRequestCost: number | null
   lastRequestHitRate: number | null
+  /** 最近一次有 usage 的请求的 token 合计（最近单次消耗展示）。 */
+  lastRequestTokens: number | null
 }
 
 /** 完整聚合状态（持久化形状）。 */
@@ -220,6 +222,7 @@ export class UsageStatsMeter {
     session.lastModel = model
     session.lastRequestCost = cost
     session.lastRequestHitRate = rate
+    session.lastRequestTokens = buckets.uncachedInputTokens + buckets.cacheReadTokens + buckets.cacheWriteTokens + buckets.outputTokens
     // 会话累计与全局聚合同一替换语义：同 (turn,step) 的二次上报按差值调整。
     session.cost += cost - (prev?.cost ?? 0)
     session.uncachedInputTokens += buckets.uncachedInputTokens - (prev?.buckets.uncachedInputTokens ?? 0)
@@ -239,6 +242,7 @@ export class UsageStatsMeter {
       record.cacheReadTokens ??= 0
       record.cacheWriteTokens ??= 0
       record.outputTokens ??= 0
+      record.lastRequestTokens ??= null
     }
     this.folds.clear()
   }
@@ -284,6 +288,7 @@ export class UsageStatsMeter {
         lastModel: null,
         lastRequestCost: null,
         lastRequestHitRate: null,
+        lastRequestTokens: null,
       }
       this.data.sessions[sessionId] = session
     }
