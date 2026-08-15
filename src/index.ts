@@ -111,7 +111,14 @@ export function apply(ctx: Context, config: Config = {}): void {
   const syncBalance = (): void => {
     const value = resolve().balance ?? { mode: 'auto' }
     balance.setSettings(value)
-    balance.setDetect(() => detectBalanceEndpoint(ctx, resolve().balance ?? { mode: 'auto' }, settingsService))
+    balance.setDetect(() => {
+      const result = detectBalanceEndpoint(ctx, resolve().balance ?? { mode: 'auto' }, settingsService)
+      if (!result.ok) {
+        // 诊断：记录推断失败时的服务与命名空间状态（生产排查余额不可用原因）
+        ctx.logger.warn(`usage-stats: balance detect failed: ${result.reason} (settings captured: ${settingsService !== undefined})`)
+      }
+      return result
+    })
   }
   // 先同步检测配置再启动定时器：start() 会立即 refresh 一次，若检测闭包尚未
   // 设置，首次快照会停留在默认的 disabled 状态（要等下一轮定时刷新才纠正）。
