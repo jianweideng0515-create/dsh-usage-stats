@@ -1,8 +1,8 @@
 .card {
   list-style: none;
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-layer-3);
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-2);
   overflow: hidden;
   min-width: 0;
   transition: border-color 0.16s, background 0.16s;
@@ -24,9 +24,10 @@
 .header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   width: 100%;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -44,14 +45,16 @@
 }
 
 .header:focus-visible {
-  outline: 2px solid var(--dsw-alias-state-business-primary);
-  outline-offset: -2px;
+  outline: none;
+  /* Clear inset ring (2px, ~1px offset) so it is not clipped by the card's
+     overflow:hidden; token-driven so it follows the active skin and theme. */
+  box-shadow: inset 0 0 0 2px var(--dsw-alias-button-info-fill);
 }
 
 .headText {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -66,7 +69,8 @@
 }
 
 .description {
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.35;
   color: var(--dsw-alias-label-tertiary);
   white-space: nowrap;
   overflow: hidden;
@@ -85,6 +89,7 @@
   color: var(--dsw-alias-label-tertiary);
   flex: none;
   font-size: 13px;
+  margin-left: 10px;
 }
 
 .chevronOpen {
@@ -92,7 +97,8 @@
 }
 
 .body {
-  padding: 0 14px 14px;
+  padding: 2px 12px 12px;
+  border-top: 1px solid var(--dsw-alias-border-l2);
   display: flex;
   flex-direction: column;
   gap: 14px;
