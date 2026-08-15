@@ -4,6 +4,8 @@ DSH Web 的 API 用量统计插件：精确统计 token、请求、完成轮次�
 
 与启发式估算不同，本插件的 token 计数是**精确**的：直接来自每个请求的 provider `usage` 报告（`inputTokens`/`outputTokens` 与 `cacheReadTokens`/`cacheWriteTokens`），并采用 DSH 自身的 `(turn, step)` 替换语义，最终消息会替换其先前的用量块而不是重复累计。
 
+![用量统计面板](docs/usage-stats.png)
+
 ## 功能
 
 - **用量概览 Tab**
