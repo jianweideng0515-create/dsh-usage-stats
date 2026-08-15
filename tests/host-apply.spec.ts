@@ -6,6 +6,7 @@ import { Context, Fiber } from '@deepseek-ai/cordis'
 import SessionStore, { Session } from '@deepseek-ai/dsh-session'
 import { apply, inject, USAGE_STATS_METER_KEY } from '../src/index.ts'
 import type { Config } from '../src/index.ts'
+import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import { UsageStatsMeter } from '../src/meter.ts'
 import { UsageStatsStore } from '../src/store.ts'
 
@@ -27,6 +28,11 @@ function meterOf(fiberCtx: Context): UsageStatsMeter {
 async function startPlugin(config: Partial<Config>): Promise<{ ctx: Context; fiber: Fiber }> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
+  // 插件 inject 声明 webServer；单测不启动真实网关，提供最小伪服务以通过依赖解析。
+  const fakeWebServer = {
+    register: (_route: WebRoute): (() => void) => () => undefined,
+  }
+  ctx.provide('webServer' as never, fakeWebServer as never)
   const fiber = await ctx.plugin({ inject, apply }, config)
   return { ctx, fiber }
 }

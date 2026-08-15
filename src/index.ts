@@ -9,12 +9,13 @@ import { UsageStatsMeter } from './meter.ts'
 import { priceBuckets, resolvePrices } from './pricing.ts'
 import type { ModelPrice } from './pricing.ts'
 import { UsageStatsStore } from './store.ts'
+import { makeRoutes } from './routes.ts'
 
 export const name = 'usage-stats'
 
-// sessions 用于事件订阅；settings 经 installSettingsSection 内部的可选注入接入，
-// 故此处仅声明 sessions（settings 是其可选能力，缺省时安装与测试都无需硬依赖）。
-export const inject = ['sessions']
+// sessions 用于事件订阅；webServer 用于注册 /api/dsh-usage-stats/* 只读路由；
+// settings 经 installSettingsSection 内部的可选注入接入，故不在此声明。
+export const inject = ['sessions', 'webServer']
 
 /** 宿主端在 ctx 上暴露 meter 的键（路由/余额任务读取）。 */
 export const USAGE_STATS_METER_KEY = Symbol('usage-stats.meter')
@@ -135,6 +136,9 @@ export function apply(ctx: Context, config: Config = {}): void {
     }
     const offEvent = ctx.on('session/event', onEvent, { global: true })
     const offFlush = ctx.on('session/flush', onFlush, { global: true })
+    // 路由 handler 运行时从 ctx 读当前 meter，故注册一次即可随重挂载取到最新状态。
+    const routes = makeRoutes(ctx)
+    const routeDisposers = routes.map((route) => ctx.webServer.register(route))
     // 卸载时落盘一次（含正常 dispose 的最终写盘）。
     const disposeEffect = ctx.effect(() => () => {
       saveNow(meter, store)
@@ -142,6 +146,8 @@ export function apply(ctx: Context, config: Config = {}): void {
     ;(ctx as unknown as Record<symbol, unknown>)[USAGE_STATS_METER_KEY] = meter
 
     disposeFiber = () => {
+      // 先注销路由，再注销事件，最后写盘。
+      for (const dispose of routeDisposers) dispose()
       offEvent()
       offFlush()
       disposeEffect()
