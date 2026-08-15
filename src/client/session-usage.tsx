@@ -212,9 +212,9 @@ export function SessionUsageButton(props: {
   )
 }
 
-/** 会话页注册侧：slot 组合 props。 */
+/** 会话页注册侧：slot 组合 props（header.utilities：头部右侧工具区）。 */
 type SessionUsageSlotProps =
-  PropsRuntime<'conversation.session.header.actions'>
+  PropsRuntime<'conversation.session.header.utilities'>
   & PropsLocale<'usage-stats'>
   & InjectFace<SessionUsageFace>
 
