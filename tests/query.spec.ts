@@ -66,4 +66,25 @@ describe('summarizeRange', () => {
     const s = summarizeRange(state, r.query)
     expect(s.avgCacheHitRate).toBeCloseTo(0.3)
   })
+  it('趋势序列每桶 hitRate = 桶内 cacheRead / 桶内全部输入', () => {
+    const date = localDateKey(NOW - 86_400_000)
+    const bucket = { ...createEmptyBucket(), requests: 2, uncachedInputTokens: 70, cacheReadTokens: 30 }
+    const state: UsageStatsState = { totals: createEmptyBucket(), byDay: { [date]: { bucket, byModel: { m: bucket } } }, sessions: {} }
+    const r = parseRange(date, date, NOW)
+    if (!r.ok) throw new Error('range')
+    const s = summarizeRange(state, r.query)
+    expect(s.series).toHaveLength(1)
+    expect(s.series[0].hitRate).toBeCloseTo(0.3)
+    expect(s.series[0].requests).toBe(2)
+    expect(s.series[0].tokens).toBe(100)
+  })
+  it('无输入的桶 hitRate 为 0', () => {
+    const date = localDateKey(NOW - 86_400_000)
+    const bucket = { ...createEmptyBucket(), requests: 1, outputTokens: 5 }
+    const state: UsageStatsState = { totals: createEmptyBucket(), byDay: { [date]: { bucket, byModel: { m: bucket } } }, sessions: {} }
+    const r = parseRange(date, date, NOW)
+    if (!r.ok) throw new Error('range')
+    const s = summarizeRange(state, r.query)
+    expect(s.series[0].hitRate).toBe(0)
+  })
 })

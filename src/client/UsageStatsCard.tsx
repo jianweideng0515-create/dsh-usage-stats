@@ -54,17 +54,101 @@ function formatCost(cost: number): string {
   return cost.toFixed(4)
 }
 
+/** 命中率展示：百分比保留两位小数（如 99.84%）。 */
 function formatRate(rate: number): string {
-  return Math.round(rate * 100) + '%'
+  return (rate * 100).toFixed(2) + '%'
 }
 
-/** 统计卡片主体：总览 + 今日/会话摘要 + 趋势 + 模型明细 + 余额。 */
+/** donut 段色：从主题语义色派生（段 1-5 + 其他），CSS 变量拼接给 conic-gradient。 */
+const DONUT_SEGMENT_VARS = [
+  'var(--dsw-alias-state-business-primary)',
+  'var(--dsw-alias-state-success-primary)',
+  'var(--dsw-alias-state-warn-primary)',
+  'var(--dsw-alias-state-error-primary)',
+  'var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary))',
+  'var(--dsw-alias-label-tertiary)',
+]
+
+/** 按请求数取模型占比段：Top 5 + 「其他」聚合；返回段与图例行。 */
+function donutSegments(models: Array<{ model: string; requests: number }>): Array<{ model: string; requests: number; share: number; colorVar: string }> {
+  const total = models.reduce((sum, m) => sum + m.requests, 0)
+  if (total <= 0) return []
+  const top = models.slice(0, 5)
+  const rest = models.slice(5).reduce((sum, m) => sum + m.requests, 0)
+  const entries = rest > 0
+    ? [...top, { model: '__other__', requests: rest }]
+    : top
+  return entries.map((m, i) => ({
+    model: m.model,
+    requests: m.requests,
+    share: m.requests / total,
+    colorVar: DONUT_SEGMENT_VARS[i % DONUT_SEGMENT_VARS.length],
+  }))
+}
+
+/** 单条 SVG 折线（无库）：数据点不足阈值时返回 null，由调用方显示占位。 */
+function MiniLine(props: {
+  values: number[]
+  colorVar: string
+  dashed?: boolean
+  format: (value: number) => string
+}): ReactElement | null {
+  const { values, colorVar, dashed, format } = props
+  if (values.length < MIN_LINE_POINTS) return null
+  const width = 120
+  const height = 36
+  const max = Math.max(...values, 1e-9)
+  const min = Math.min(...values)
+  const span = Math.max(max - min, 1e-9)
+  const stepX = values.length > 1 ? width / (values.length - 1) : width
+  const points = values.map((v, i) => `${(i * stepX).toFixed(1)},${(height - 2 - ((v - min) / span) * (height - 4)).toFixed(1)}`).join(' ')
+  return (
+    <svg
+      className={styles.miniLine}
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label={values.map((v, i) => `${i}: ${format(v)}`).join('; ')}
+    >
+      <polyline
+        points={points}
+        fill="none"
+        stroke={colorVar}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        strokeDasharray={dashed ? '3 2' : undefined}
+      />
+      {values.map((v, i) => (
+        <circle key={i} cx={(i * stepX).toFixed(1)} cy={(height - 2 - ((v - min) / span) * (height - 4)).toFixed(1)} r="1.6" fill={colorVar} />
+      ))}
+    </svg>
+  )
+}
+
+/** 折线图最少数据点（数据不足时折线无意义，显示占位文案）。 */
+const MIN_LINE_POINTS = 4
+
+/** 统计卡片主体：KPI 网格 + Token 趋势 + 模型占比 + 命中率/费用折线 + 明细 + 余额。 */
 export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
   const { t, summary, balance, loading, error } = props
   const maxSeries = useMemo(() => {
     if (summary === null || summary.series.length === 0) return 0
     return Math.max(...summary.series.map((p) => p.tokens))
   }, [summary])
+  const segments = useMemo(() => summary === null ? [] : donutSegments(summary.byModel), [summary])
+  const donutStyle = useMemo(() => {
+    if (segments.length === 0) return undefined
+    let cursor = 0
+    const stops = segments.map((s) => {
+      const from = cursor
+      cursor += s.share
+      return `${s.colorVar} ${(from * 100).toFixed(2)}% ${(cursor * 100).toFixed(2)}%`
+    })
+    return { background: `conic-gradient(${stops.join(', ')})` }
+  }, [segments])
+  const hitRateSeries = summary?.series.map((p) => p.hitRate) ?? []
+  const costSeries = summary?.series.map((p) => p.cost) ?? []
+  const costAllZero = summary !== null && summary.cost === 0 && summary.uncountedRequests > 0
 
   return (
     <div className={styles.card}>
@@ -103,21 +187,96 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
       {error !== null ? <p className={styles.status}>{t('error')}: {error}</p> : null}
       {summary !== null ? (
         <>
-          <dl className={styles.metrics}>
-            <div><dt>{t('metric.tokens')}</dt><dd title={t('metric.tokensHint')}>{formatTokens(summary.tokens.total)}</dd></div>
-            <div><dt>{t('metric.requests')}</dt><dd>{summary.requests}</dd></div>
-            <div><dt>{t('metric.turns')}</dt><dd>{summary.turns}</dd></div>
-            <div><dt>{t('metric.activeDays')}</dt><dd>{summary.activeDays}</dd></div>
-            <div><dt>{t('metric.avgHitRate')}</dt><dd>{formatRate(summary.avgCacheHitRate)}</dd></div>
-            <div><dt>{t('metric.topModel')}</dt><dd>{summary.topModel ?? '-'}</dd></div>
-            <div><dt>{t('metric.cost')}</dt><dd>{formatCost(summary.cost)}</dd></div>
-            <div><dt>{t('metric.uncounted')}</dt><dd>{summary.uncountedRequests}</dd></div>
-          </dl>
+          <div className={styles.kpiGrid}>
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-business-primary)' }} />
+              <dd className={styles.kpiValue} title={t('metric.tokensHint')}>{formatTokens(summary.tokens.total)}</dd>
+              <dt className={styles.kpiLabel}>{t('metric.tokens')}</dt>
+            </div>
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary))' }} />
+              <dd className={styles.kpiValue}>{summary.requests}</dd>
+              <dt className={styles.kpiLabel}>{t('metric.requests')}</dt>
+            </div>
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-success-primary)' }} />
+              <dd className={styles.kpiValue}>{summary.turns}</dd>
+              <dt className={styles.kpiLabel}>{t('metric.turns')}</dt>
+            </div>
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-warn-primary)' }} />
+              <dd className={styles.kpiValue}>{summary.activeDays}</dd>
+              <dt className={styles.kpiLabel}>{t('metric.activeDays')}</dt>
+            </div>
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-success-primary)' }} />
+              <dd className={styles.kpiValue}>{formatRate(summary.avgCacheHitRate)}</dd>
+              <dt className={styles.kpiLabel}>{t('metric.avgHitRate')}</dt>
+            </div>
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-warn-primary)' }} />
+              <dd className={styles.kpiValue}>{formatCost(summary.cost)}</dd>
+              <dt className={styles.kpiLabel}>{t('metric.cost')}</dt>
+            </div>
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiAccent} style={{ background: 'var(--dsw-alias-state-error-primary)' }} />
+              <dd className={styles.kpiValue}>{summary.uncountedRequests}</dd>
+              <dt className={styles.kpiLabel}>{t('metric.uncounted')}</dt>
+            </div>
+          </div>
           <div className={styles.tokenSplit}>
             <span>{t('tokens.input')} {formatTokens(summary.tokens.uncachedInputTokens)}</span>
             <span>{t('tokens.cacheRead')} {formatTokens(summary.tokens.cacheReadTokens)}</span>
             <span>{t('tokens.cacheWrite')} {formatTokens(summary.tokens.cacheWriteTokens)}</span>
             <span>{t('tokens.output')} {formatTokens(summary.tokens.outputTokens)}</span>
+          </div>
+          <h4 className={styles.heading}>{t('trend.title')}</h4>
+          <div className={styles.bars}>
+            {summary.series.map((p) => (
+              <div key={p.bucket} className={styles.barCol} title={`${p.bucket}: ${p.requests} ${t('metric.requests')}, ${formatTokens(p.tokens)} tok`}>
+                <span className={styles.barValue}>{formatTokens(p.tokens)}</span>
+                <div className={styles.bar} style={{ height: maxSeries > 0 ? `${Math.max(4, (p.tokens / maxSeries) * 100)}%` : '4%' }} />
+                <span className={styles.barBucket}>{p.bucket.slice(5)}</span>
+              </div>
+            ))}
+          </div>
+          <div className={styles.chartRow}>
+            <div className={styles.chartCell}>
+              <h4 className={styles.heading}>{t('chart.donut')}</h4>
+              {segments.length === 0 ? <p className={styles.status}>{t('chart.noData')}</p> : (
+                <div className={styles.donutWrap}>
+                  <div className={styles.donut} style={donutStyle} role="img" aria-label={segments.map((s) => `${s.model}: ${Math.round(s.share * 100)}%`).join('; ')}>
+                    <div className={styles.donutHole}>
+                      <span className={styles.donutTotal}>{summary.requests}</span>
+                      <span className={styles.donutTotalLabel}>{t('metric.requests')}</span>
+                    </div>
+                  </div>
+                  <ul className={styles.legend}>
+                    {segments.map((s) => (
+                      <li key={s.model}>
+                        <span className={styles.legendDot} style={{ background: s.colorVar }} />
+                        <span className={styles.legendModel}>{s.model === '__other__' ? t('chart.other') : s.model}</span>
+                        <span className={styles.legendShare}>{Math.round(s.share * 100)}%</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <div className={styles.chartCell}>
+              <h4 className={styles.heading}>{t('chart.hitRate')}</h4>
+              {hitRateSeries.length >= MIN_LINE_POINTS
+                ? <MiniLine values={hitRateSeries} colorVar="var(--dsw-alias-state-success-primary)" dashed format={formatRate} />
+                : <p className={styles.status}>{t('chart.insufficientData')}</p>}
+            </div>
+            <div className={styles.chartCell}>
+              <h4 className={styles.heading}>{t('chart.cost')}</h4>
+              {costAllZero
+                ? <p className={styles.status}>{t('chart.noCost')}</p>
+                : costSeries.length >= MIN_LINE_POINTS
+                  ? <MiniLine values={costSeries} colorVar="var(--dsw-alias-state-business-primary)" format={formatCost} />
+                  : <p className={styles.status}>{t('chart.insufficientData')}</p>}
+            </div>
           </div>
           {summary.perSession !== null ? (
             <dl className={styles.metrics}>
@@ -127,14 +286,6 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
               <div><dt>{t('metric.sessionCost')}</dt><dd>{formatCost(summary.perSession.cost)}</dd></div>
             </dl>
           ) : null}
-          <h4 className={styles.heading}>{t('trend.title')}</h4>
-          <div className={styles.bars}>
-            {summary.series.map((p) => (
-              <div key={p.bucket} className={styles.barCol} title={`${p.bucket}: ${p.requests} req, ${formatTokens(p.tokens)} tok`}>
-                <div className={styles.bar} style={{ height: maxSeries > 0 ? `${Math.max(4, (p.tokens / maxSeries) * 100)}%` : '4%' }} />
-              </div>
-            ))}
-          </div>
           <h4 className={styles.heading}>{t('model.table')}</h4>
           <table className={styles.table}>
             <thead><tr><th>{t('metric.topModel')}</th><th>{t('metric.requests')}</th><th>{t('metric.tokens')}</th><th>{t('metric.cost')}</th></tr></thead>

@@ -20,7 +20,7 @@ const summary: SummaryResponse = {
   cost: 0.35, activeDays: 2, avgCacheHitRate: 0.31, topModel: 'deepseek-chat',
   uncountedRequests: 1,
   byModel: [{ model: 'deepseek-chat', requests: 11, tokens: 1700, cost: 0.33 }],
-  series: [{ bucket: '2026-08-14', requests: 5, tokens: 800, cost: 0.15 }],
+  series: [{ bucket: '2026-08-14', requests: 5, tokens: 800, cost: 0.15, hitRate: 0.3 }],
   perSession: { sessionId: 's1', workspace: null, turns: 3, requests: 4, cost: 0.1, lastRequestAt: null, lastModel: 'deepseek-chat', lastRequestCost: 0.05, lastRequestHitRate: 0.4 },
 }
 
@@ -48,10 +48,25 @@ describe('UsageStatsCard', () => {
       error={null}
       {...baseProps}
     />)
-    expect(screen.getByText('12')).toBeTruthy()          // 请求数量
+    expect(screen.getAllByText('12').length).toBeGreaterThan(0)  // 请求数量（KPI 卡 + donut 中心）
     expect(screen.getByText('9')).toBeTruthy()            // 完成轮次
     expect(screen.getAllByText('deepseek-chat').length).toBeGreaterThan(0) // 最常用模型 / 明细表
     expect(screen.getByText(/12\.34/)).toBeTruthy()      // 余额
+  })
+
+  it('命中率显示两位小数', () => {
+    const t = (key: string) => key
+    render(<UsageStatsCard
+      t={t}
+      summary={{ ...summary, avgCacheHitRate: 0.9984 }}
+      balance={{ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null }}
+      loading={false}
+      error={null}
+      {...baseProps}
+    />)
+    // KPI 卡命中率 99.84%；会话摘要本次命中 40.00%（0.4 → 两位小数）
+    expect(screen.getByText('99.84%')).toBeTruthy()
+    expect(screen.getAllByText('40.00%').length).toBeGreaterThan(0)
   })
 
   it('余额不可用时显示原因', () => {

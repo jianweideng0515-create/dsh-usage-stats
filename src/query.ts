@@ -4,8 +4,8 @@ import type { TokenBuckets, UsageStatsState } from './meter.ts'
 /** 区间查询参数：起止日期键（YYYY-MM-DD）+ 聚合粒度。 */
 export interface RangeQuery { from: string; to: string; granularity: 'day' | 'week' }
 
-/** 趋势序列点：单日或自然周的聚合。 */
-export interface SeriesPoint { bucket: string; requests: number; tokens: number; cost: number }
+/** 趋势序列点：单日或自然周的聚合（hitRate 为该桶缓存命中率，无输入为 0）。 */
+export interface SeriesPoint { bucket: string; requests: number; tokens: number; cost: number; hitRate: number }
 
 /** 分模型聚合行。 */
 export interface ModelSummary { model: string; requests: number; tokens: number; cost: number }
@@ -80,6 +80,7 @@ export function summarizeRange(state: UsageStatsState, query: RangeQuery): Range
   const tokens = EMPTY_TOKENS()
   const byModel = new Map<string, { requests: number; tokens: number; cost: number }>()
   const series = new Map<string, SeriesPoint>()
+  const bucketInput = new Map<string, number>() // 桶内输入合计（cacheRead+uncached+cacheWrite），用于换算 hitRate
   let requests = 0
   let turns = 0
   let cost = 0
@@ -110,13 +111,25 @@ export function summarizeRange(state: UsageStatsState, query: RangeQuery): Range
       if (model === UNKNOWN_MODEL) uncountedRequests += mb.requests
     }
     const bucketKey = query.granularity === 'day' ? date : weekKey(date)
-    const point = series.get(bucketKey) ?? { bucket: bucketKey, requests: 0, tokens: 0, cost: 0 }
+    let point = series.get(bucketKey)
+    if (point === undefined) {
+      point = { bucket: bucketKey, requests: 0, tokens: 0, cost: 0, hitRate: 0 }
+      series.set(bucketKey, point)
+    }
     point.requests += b.requests
     point.tokens += b.uncachedInputTokens + b.cacheReadTokens + b.cacheWriteTokens + b.outputTokens
     point.cost += b.cost
+    point.hitRate += b.cacheReadTokens
     series.set(bucketKey, point)
+    bucketInput.set(bucketKey, (bucketInput.get(bucketKey) ?? 0) + b.uncachedInputTokens + b.cacheReadTokens + b.cacheWriteTokens)
   }
   tokens.total = tokens.uncachedInputTokens + tokens.cacheReadTokens + tokens.cacheWriteTokens + tokens.outputTokens
+
+  // 换算每桶命中率：hitRate 字段累加的是桶内 cacheRead，除以桶内输入合计。
+  for (const point of series.values()) {
+    const input = bucketInput.get(point.bucket) ?? 0
+    point.hitRate = input <= 0 ? 0 : point.hitRate / input
+  }
 
   const modelList = [...byModel.entries()]
     .map(([model, v]) => ({ model, ...v }))

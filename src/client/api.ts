@@ -12,6 +12,7 @@ export interface SeriesPoint {
   requests: number
   tokens: number
   cost: number
+  hitRate: number
 }
 
 export interface ModelSummary {
