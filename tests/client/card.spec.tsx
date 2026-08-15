@@ -95,9 +95,9 @@ describe('UsageStatsCard', () => {
     fireEvent.click(screen.getByText('provider.deepseek'))
     expect(screen.getAllByText(/12\.34/).length).toBeGreaterThanOrEqual(2)
     expect(screen.getByText(/balance\.estimate/)).toBeTruthy()
-    // 切到 Ollama → 本地模型占位卡
-    fireEvent.click(screen.getByText('provider.ollama'))
-    expect(screen.getByText('provider.ollamaTitle')).toBeTruthy()
+    // 切回 OpenCode → 配额视图（无配额数据 → 不可用提示）
+    fireEvent.click(screen.getByText('provider.opencode'))
+    expect(screen.getByText(/balance\.unavailable/)).toBeTruthy()
   })
 
   it('OpenCode 配额展示三窗口进度条卡', () => {

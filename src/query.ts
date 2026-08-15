@@ -81,6 +81,20 @@ export function summarizeRange(state: UsageStatsState, query: RangeQuery): Range
   const byModel = new Map<string, { requests: number; tokens: number; cost: number }>()
   const series = new Map<string, SeriesPoint>()
   const bucketInput = new Map<string, number>() // 桶内输入合计（cacheRead+uncached+cacheWrite），用于换算 hitRate
+
+  // 补零骨架：范围内逐日（day）或逐自然周（week）预置零值桶，保证趋势图时间轴连续
+  const DAY_MS = 86_400_000
+  if (query.granularity === 'day') {
+    for (let t = Date.parse(query.from + 'T12:00:00'); t <= Date.parse(query.to + 'T12:00:00'); t += DAY_MS) {
+      const bucket = localDateKey(t)
+      series.set(bucket, { bucket, requests: 0, tokens: 0, cost: 0, hitRate: 0 })
+    }
+  } else {
+    for (let t = Date.parse(weekKey(query.from) + 'T12:00:00'); t <= Date.parse(weekKey(query.to) + 'T12:00:00'); t += 7 * DAY_MS) {
+      const bucket = localDateKey(t)
+      series.set(bucket, { bucket, requests: 0, tokens: 0, cost: 0, hitRate: 0 })
+    }
+  }
   let requests = 0
   let turns = 0
   let cost = 0

@@ -12,12 +12,8 @@ export interface UsageStatsCopy {
   'provider.switch': string
   'provider.opencode': string
   'provider.deepseek': string
-  'provider.openai': string
-  'provider.ollama': string
   'provider.weeklyQuota': string
   'provider.prepay': string
-  'provider.monthlyLimit': string
-  'provider.localFree': string
   'provider.notConnected': string
   'kpi.hitTokens': string
   'kpi.daysUnit': string
@@ -62,10 +58,6 @@ export interface UsageStatsCopy {
   'balance.days': string
   'balance.sufficient': string
   'balance.recharge': string
-  'provider.openaiLimit': string
-  'provider.openaiSub': string
-  'provider.ollamaTitle': string
-  'provider.ollamaDesc': string
   'chart.savedRatio': string
   'range.last7': string
   'range.last14': string
@@ -144,12 +136,8 @@ export const zh: UsageStatsCopy = {
   'provider.switch': '切换提供商',
   'provider.opencode': 'OpenCode Go',
   'provider.deepseek': 'DeepSeek 官方',
-  'provider.openai': 'OpenAI',
-  'provider.ollama': 'Ollama',
   'provider.weeklyQuota': '周配额',
   'provider.prepay': '预付费',
-  'provider.monthlyLimit': '月限制',
-  'provider.localFree': '本地免费',
   'provider.notConnected': '未接入',
   'kpi.hitTokens': '命中',
   'kpi.daysUnit': '天',
@@ -194,10 +182,6 @@ export const zh: UsageStatsCopy = {
   'balance.days': '天消耗',
   'balance.sufficient': '余额充足',
   'balance.recharge': '充值余额',
-  'provider.openaiLimit': 'OpenAI 月度额度上限',
-  'provider.openaiSub': '未接入 OpenAI 用量数据',
-  'provider.ollamaTitle': 'Ollama 私有化 / 本地模型',
-  'provider.ollamaDesc': '本地推理无需消耗云端 Token 费用，无额度限制与账单余额要求。',
   'chart.savedRatio': '节省比例',
   'range.last7': '最近 7 天',
   'range.last14': '最近 14 天',
@@ -273,12 +257,8 @@ export const en: UsageStatsCopy = {
   'provider.switch': 'Provider',
   'provider.opencode': 'OpenCode Go',
   'provider.deepseek': 'DeepSeek',
-  'provider.openai': 'OpenAI',
-  'provider.ollama': 'Ollama',
   'provider.weeklyQuota': 'Weekly quota',
   'provider.prepay': 'Prepaid',
-  'provider.monthlyLimit': 'Monthly limit',
-  'provider.localFree': 'Local free',
   'provider.notConnected': 'Not connected',
   'kpi.hitTokens': 'hit',
   'kpi.daysUnit': 'd',
@@ -323,10 +303,6 @@ export const en: UsageStatsCopy = {
   'balance.days': 'days of usage',
   'balance.sufficient': 'Sufficient balance',
   'balance.recharge': 'Recharge',
-  'provider.openaiLimit': 'OpenAI monthly credit limit',
-  'provider.openaiSub': 'No OpenAI usage data connected',
-  'provider.ollamaTitle': 'Ollama private / local models',
-  'provider.ollamaDesc': 'Local inference costs no cloud tokens; no quota limits or billing balance required.',
   'chart.savedRatio': 'Saved ratio',
   'range.last7': 'Last 7 days',
   'range.last14': 'Last 14 days',

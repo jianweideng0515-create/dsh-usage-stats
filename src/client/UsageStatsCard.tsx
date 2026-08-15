@@ -340,13 +340,11 @@ function TrendAreaChart(props: {
 }
 
 /** 提供商维度（影响 KPI 动态卡与配额/余额视图）。 */
-export type ProviderId = 'opencode' | 'deepseek' | 'openai' | 'ollama'
+export type ProviderId = 'opencode' | 'deepseek'
 
 const PROVIDERS: Array<{ key: ProviderId; labelKey: string }> = [
   { key: 'opencode', labelKey: 'provider.opencode' },
   { key: 'deepseek', labelKey: 'provider.deepseek' },
-  { key: 'openai', labelKey: 'provider.openai' },
-  { key: 'ollama', labelKey: 'provider.ollama' },
 ]
 
 /** 常驻 KPI 区：4 张 KPI 卡 + Token 四分色拆分（不随 Tab 切换）。 */
@@ -377,12 +375,6 @@ function KpiOverview(props: {
     dynamicSub = balance?.updatedAt !== null && balance?.updatedAt !== undefined
       ? `${t('balance.updated')} ${new Date(balance.updatedAt).toLocaleString()}`
       : t('provider.notConnected')
-  } else if (provider === 'openai') {
-    dynamicChip = t('provider.monthlyLimit')
-    dynamicSub = t('provider.notConnected')
-  } else {
-    dynamicChip = t('provider.localFree')
-    dynamicSub = t('provider.notConnected')
   }
   return (
     <>
@@ -431,7 +423,7 @@ function KpiOverview(props: {
         </div>
         <div className={styles.kpiCardDynamic}>
           <div className={styles.kpiTopRow}>
-            <span className={styles.kpiDynamicLabel}>{provider === 'opencode' ? t('provider.opencode') : provider === 'deepseek' ? t('provider.deepseek') : provider === 'openai' ? t('provider.openai') : t('provider.ollama')}</span>
+            <span className={styles.kpiDynamicLabel}>{provider === 'opencode' ? t('provider.opencode') : t('provider.deepseek')}</span>
             <span className={`${styles.chip} ${styles.chipBlue}`}>{dynamicChip}</span>
           </div>
           <dd className={styles.kpiValueAccent}>{dynamicValue}</dd>
@@ -607,7 +599,7 @@ function QuotaTab(props: {
   balance: BalanceResponse | null
   balanceRefreshing: boolean
   onRefreshBalance: () => void
-}): ReactElement {
+}): ReactElement | null {
   const { t, provider, summary, balance, balanceRefreshing, onRefreshBalance } = props
   const quota = balance?.quota ?? null
   if (balance === null) return <p className={styles.status}>{t('loading')}</p>
@@ -666,27 +658,8 @@ function QuotaTab(props: {
       </div>
     )
   }
-  if (provider === 'openai') {
-    return (
-      <div className={styles.placeholderCard}>
-        <div className={styles.placeholderRow}>
-          <span className={styles.placeholderTitle}>{t('provider.openaiLimit')}</span>
-          <span className={`${styles.chip} ${styles.chipNeutral}`}>{t('provider.monthlyLimit')}</span>
-        </div>
-        <div className={styles.placeholderValue}>-</div>
-        <p className={styles.status}>{t('provider.openaiSub')}</p>
-      </div>
-    )
-  }
-  return (
-    <div className={styles.placeholderCard}>
-      <div className={styles.placeholderRow}>
-        <span className={styles.placeholderTitle}>{t('provider.ollamaTitle')}</span>
-        <span className={`${styles.chip} ${styles.chipEmerald}`}>{t('provider.localFree')}</span>
-      </div>
-      <p className={styles.status}>{t('provider.ollamaDesc')}</p>
-    </div>
-  )
+  // ProviderId 仅剩 opencode/deepseek 两支，代码不可达（保持类型收窄完整性）
+  return null
 }
 
 /** 重置倒计时文案：'2 天 3 小时后重置' / '5 小时后重置' / '30 分钟后重置'。 */

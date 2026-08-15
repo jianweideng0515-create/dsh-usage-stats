@@ -1731,43 +1731,6 @@
   filter: brightness(1.1);
 }
 
-/* OpenAI / Ollama 占位卡（参考原型对应视图） */
-.placeholderCard {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 0.75rem;
-  background: var(--dsw-alias-bg-layer-2);
-  min-width: 0;
-}
-
-.placeholderRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.placeholderTitle {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--dsw-alias-label-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.placeholderValue {
-  font-size: 1.5rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--dsw-alias-label-tertiary);
-  line-height: 1.1;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .kpiCard,
   .tokenStackedSeg,
