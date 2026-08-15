@@ -129,5 +129,21 @@ describe('SessionUsageController 切换会话', () => {
     expect(fetchSessionUsageMock.mock.calls.some((c) => c[0] === 's-b')).toBe(true)
     fetchSessionUsageMock.mockClear()
   })
+
+  it('面板未打开时绑定会话也会拉取一次（按钮不显示 0）', async () => {
+    mockSessionResponses.set('s-c', { ...session, sessionId: 's-c', turns: 3, lastTurnTokens: 300 })
+    const { fetchSessionUsage } = await import('../../src/client/api.ts')
+    const fetchSessionUsageMock = fetchSessionUsage as unknown as ReturnType<typeof vi.fn>
+    fetchSessionUsageMock.mockClear()
+    const controller = new SessionUsageController()
+    const face = controller.inject('s-c') // 不打开面板
+    await new Promise((r) => setTimeout(r, 20))
+    const snapshot = face.hooks.sessionUsage.get()
+    expect(snapshot.open).toBe(false)
+    expect(snapshot.perSession?.sessionId).toBe('s-c')
+    expect(snapshot.perSession?.turns).toBe(3)
+    expect(fetchSessionUsageMock.mock.calls.some((c) => c[0] === 's-c')).toBe(true)
+    fetchSessionUsageMock.mockClear()
+  })
 })
 

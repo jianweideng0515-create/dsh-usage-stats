@@ -130,17 +130,16 @@ export class SessionUsageController {
 
   /**
    * session scope 注入：框架在每次会话渲染时传入当前会话 ID。
-   * 切换会话时立即清空旧会话数据并重新拉取（面板开启时），
-   * 避免停留在上一个会话的用量上。
+   * 会话绑定/切换时立即清空旧数据并拉取一次（不依赖面板是否打开）：
+   * 按钮上始终显示当前会话用量，重启/刷新后不会停留在 0。
+   * 面板打开时另有 30s 轮询。
    */
   inject(sessionId: string): SessionUsageFace {
     if (this.sessionId !== sessionId) {
       this.sessionId = sessionId
       this.perSession = null
       this.error = null
-      if (this.open) {
-        void this.poll()
-      }
+      void this.poll()
       this.publish()
     }
     return {
