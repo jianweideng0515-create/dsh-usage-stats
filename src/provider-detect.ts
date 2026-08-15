@@ -51,8 +51,18 @@ function serviceOrUndefined<T>(ctx: Context, name: string): T | undefined {
   }
 }
 
-/** 按给定配置与运行时服务解析出可用的余额端点。 */
-export function detectBalanceEndpoint(ctx: Context, settings: BalanceSettings): DetectResult {
+/**
+ * 按给定配置与运行时服务解析出可用的余额端点。
+ * @param ctx - 插件上下文（服务读取失败按缺失处理）。
+ * @param settings - 余额配置。
+ * @param settingsService - 可选：调用方已捕获的 settings 服务（cordis 的
+ *   ctx.inject 可选注入结果）；缺省时尝试从 ctx 安全读取。
+ */
+export function detectBalanceEndpoint(
+  ctx: Context,
+  settings: BalanceSettings,
+  settingsService?: { get(ns: unknown): unknown },
+): DetectResult {
   if (settings.mode === 'off') return { ok: false, reason: 'disabled' }
   if (settings.mode === 'manual') {
     if (settings.baseUrl === undefined || settings.baseUrl === '') {
@@ -80,8 +90,9 @@ export function detectBalanceEndpoint(ctx: Context, settings: BalanceSettings): 
   if (entry === undefined) return { ok: false, reason: `provider ${provider} not found` }
 
   // 从命名空间取值，沿 settingsPath 逐层取 profile（任一层非对象即视为不可用）。
-  const settingsService = serviceOrUndefined<{ get(ns: unknown): unknown }>(ctx, 'settings')
-  const raw = settingsService?.get(settingsNamespace(entry.settingsNs))
+  const settingsServiceValue = settingsService
+    ?? serviceOrUndefined<{ get(ns: unknown): unknown }>(ctx, 'settings')
+  const raw = settingsServiceValue?.get(settingsNamespace(entry.settingsNs))
   let profile: unknown = raw
   for (const key of entry.settingsPath) {
     if (typeof profile !== 'object' || profile === null) { profile = undefined; break }

@@ -93,8 +93,13 @@ export function apply(ctx: Context, config: Config = {}): void {
 
   // 余额客户端与定时器：apply 顶层创建一次，跨 mount 保持运行；热更新只改
   // settings/detect（mount 内调用），不重建定时器。整体 dispose 时经效应清理。
-  // llm/agentDefaultModel 不注入（硬依赖会挂起测试），apply 内用可选链访问；
-  // 缺失时 detectBalanceEndpoint 返回 reason。fetch 用全局 fetch，key 从环境变量读。
+  // agentDefaultModel/llm 在 inject 中声明（cordis 硬依赖，web 组合总是存在）；
+  // settings 经 ctx.inject 可选注入捕获（服务缺失不影响插件激活），供余额
+  // 端点自动推断读取其他插件的命名空间。fetch 用全局 fetch，key 从环境变量读。
+  let settingsService: { get(ns: unknown): unknown } | undefined
+  ctx.inject(['settings'], (injectedCtx) => {
+    settingsService = injectedCtx.settings as { get(ns: unknown): unknown }
+  })
   const balance = new BalanceClient({
     fetchFn: fetch,
     getEnv: (name) => process.env[name],
@@ -102,7 +107,7 @@ export function apply(ctx: Context, config: Config = {}): void {
   const syncBalance = (): void => {
     const value = resolve().balance ?? { mode: 'auto' }
     balance.setSettings(value)
-    balance.setDetect(() => detectBalanceEndpoint(ctx, resolve().balance ?? { mode: 'auto' }))
+    balance.setDetect(() => detectBalanceEndpoint(ctx, resolve().balance ?? { mode: 'auto' }, settingsService))
   }
   // 先同步检测配置再启动定时器：start() 会立即 refresh 一次，若检测闭包尚未
   // 设置，首次快照会停留在默认的 disabled 状态（要等下一轮定时刷新才纠正）。
