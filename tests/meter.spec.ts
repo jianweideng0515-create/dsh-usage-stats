@@ -134,4 +134,50 @@ describe('UsageStatsMeter', () => {
     expect(Number.isFinite(s.sessions['s1'].cost)).toBe(true)
     expect(Number.isFinite(s.sessions['s1'].lastRequestCost as number)).toBe(true)
   })
+
+  it('会话记录累计 token 分项，替换语义不双计', () => {
+    const meter = new UsageStatsMeter()
+    meter.applyEvent('s1', null, ev('request/header', { header: { config: { provider: 'p', model: 'm' } }, reason: 'initial' }))
+    meter.applyEvent('s1', null, ev('step/start', { turn: 1, step: 1 }))
+    meter.applyEvent('s1', null, ev('assistant/chunk', { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 100, outputTokens: 10, cacheReadTokens: 30, cacheWriteTokens: 5 } } }))
+    meter.applyEvent('s1', null, ev('assistant/message', { turn: 1, step: 1, message: { role: 'assistant', content: [] }, usage: { inputTokens: 110, outputTokens: 12, cacheReadTokens: 40, cacheWriteTokens: 5 } }))
+    const s = meter.state()
+    const record = s.sessions['s1']
+    expect(record.uncachedInputTokens).toBe(110)
+    expect(record.cacheReadTokens).toBe(40)
+    expect(record.cacheWriteTokens).toBe(5)
+    expect(record.outputTokens).toBe(12)
+    // 第二个请求直接累加
+    meter.applyEvent('s1', null, ev('step/start', { turn: 1, step: 2 }))
+    meter.applyEvent('s1', null, ev('assistant/chunk', { turn: 1, step: 2, chunk: { type: 'usage', usage: { inputTokens: 20, outputTokens: 3 } } }))
+    const s2 = meter.state()
+    expect(s2.sessions['s1'].uncachedInputTokens).toBe(130)
+    expect(s2.sessions['s1'].outputTokens).toBe(15)
+  })
+
+  it('restore 旧数据补齐缺失的会话 token 分项', () => {
+    const old = {
+      totals: { uncachedInputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0, requests: 0, turns: 0, cost: 0 },
+      byDay: {},
+      sessions: {
+        s1: {
+          sessionId: 's1', workspace: null, createdAt: '', turns: 0, requests: 0, cost: 0,
+          lastRequestAt: null, lastModel: null, lastRequestCost: null, lastRequestHitRate: null,
+        } as never,
+      },
+    }
+    const meter = new UsageStatsMeter()
+    meter.restore(old as never)
+    const record = meter.state().sessions['s1']
+    expect(record.uncachedInputTokens).toBe(0)
+    expect(record.cacheReadTokens).toBe(0)
+    expect(record.cacheWriteTokens).toBe(0)
+    expect(record.outputTokens).toBe(0)
+    // 补齐后可继续累计不产生 NaN
+    meter.applyEvent('s1', null, ev('request/header', { header: { config: { provider: 'p', model: 'm' } }, reason: 'initial' }))
+    meter.applyEvent('s1', null, ev('step/start', { turn: 1, step: 1 }))
+    meter.applyEvent('s1', null, ev('assistant/chunk', { turn: 1, step: 1, chunk: { type: 'usage', usage: { inputTokens: 50, outputTokens: 5 } } }))
+    expect(Number.isFinite(meter.state().sessions['s1'].uncachedInputTokens)).toBe(true)
+    expect(meter.state().sessions['s1'].uncachedInputTokens).toBe(50)
+  })
 })

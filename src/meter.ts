@@ -34,6 +34,11 @@ export interface SessionRecord {
   turns: number
   requests: number
   cost: number
+  /** 会话级 token 分项（会话页用量：Tokens 用量与平均命中率由此计算）。 */
+  uncachedInputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  outputTokens: number
   lastRequestAt: string | null
   lastModel: string | null
   lastRequestCost: number | null
@@ -215,15 +220,26 @@ export class UsageStatsMeter {
     session.lastModel = model
     session.lastRequestCost = cost
     session.lastRequestHitRate = rate
+    // 会话累计与全局聚合同一替换语义：同 (turn,step) 的二次上报按差值调整。
     session.cost += cost - (prev?.cost ?? 0)
+    session.uncachedInputTokens += buckets.uncachedInputTokens - (prev?.buckets.uncachedInputTokens ?? 0)
+    session.cacheReadTokens += buckets.cacheReadTokens - (prev?.buckets.cacheReadTokens ?? 0)
+    session.cacheWriteTokens += buckets.cacheWriteTokens - (prev?.buckets.cacheWriteTokens ?? 0)
+    session.outputTokens += buckets.outputTokens - (prev?.buckets.outputTokens ?? 0)
     fold.pending = { turn, step, buckets, cost, hitRate: rate }
   }
 
-  /** 用持久化状态重建（清空会话折叠态）。 */
+  /** 用持久化状态重建（清空会话折叠态；旧版本数据补齐会话 token 分项）。 */
   restore(state: UsageStatsState): void {
     this.data.totals = { ...createEmptyBucket(), ...state.totals }
     this.data.byDay = state.byDay
     this.data.sessions = state.sessions
+    for (const record of Object.values(this.data.sessions)) {
+      record.uncachedInputTokens ??= 0
+      record.cacheReadTokens ??= 0
+      record.cacheWriteTokens ??= 0
+      record.outputTokens ??= 0
+    }
     this.folds.clear()
   }
 
@@ -260,6 +276,10 @@ export class UsageStatsMeter {
         turns: 0,
         requests: 0,
         cost: 0,
+        uncachedInputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        outputTokens: 0,
         lastRequestAt: null,
         lastModel: null,
         lastRequestCost: null,
