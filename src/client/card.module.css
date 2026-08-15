@@ -1596,12 +1596,11 @@
   border: 1px solid color-mix(in srgb, var(--dsw-alias-label-tertiary) 30%, transparent);
 }
 
-/* 数字区：大数字与说明左右两列，baseline 对齐 */
+/* 数字区：大数字 + % 紧凑排列（无右侧说明文字） */
 .quotaCardValue {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
+  gap: 2px;
   font-size: 1.75rem;
   font-weight: 900;
   color: var(--dsw-alias-label-primary);
@@ -1613,14 +1612,6 @@
   font-size: 0.875rem;
   font-weight: 400;
   color: var(--dsw-alias-label-secondary);
-}
-
-.quotaCardUsed {
-  font-size: 0.6875rem;
-  font-weight: 500;
-  color: var(--dsw-alias-label-tertiary);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  white-space: nowrap;
 }
 
 .progressBarBg {

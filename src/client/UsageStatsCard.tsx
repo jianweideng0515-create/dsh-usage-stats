@@ -456,8 +456,9 @@ function KpiOverview(props: {
 function OverviewTab(props: {
   t: (key: string) => string
   summary: SummaryResponse
+  costCurrency: string
 }): ReactElement {
-  const { t, summary } = props
+  const { t, summary, costCurrency } = props
   return (
     <>
       <h4 className={styles.heading}>{t('trend.title')}</h4>
@@ -483,7 +484,9 @@ function OverviewTab(props: {
                 </td>
                 <td className={styles.tdRight}>{m.requests}</td>
                 <td className={`${styles.tdRight} ${styles.tdStrong}`}>{formatTokens(m.tokens)}</td>
-                <td className={styles.tdRight}>{formatCost(m.cost)}</td>
+                <td className={styles.tdRight}>
+                  <span className={styles.kpiCostVal}>{costSymbol(costCurrency)}{formatCost(m.cost)}</span>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -585,9 +588,6 @@ function QuotaWindowCard(props: {
       </div>
       <div className={styles.quotaCardValue}>
         {window.percent}<span className={styles.quotaCardUnit}>%</span>
-        <span className={styles.quotaCardUsed} style={{ color: level.colorVar }}>
-          {highlight ? `${t('quota.remaining')} ${100 - window.percent}%` : `${t('quota.used')} ${window.percent}%`}
-        </span>
       </div>
       <div className={styles.progressBarBg}>
         <div className={styles.progressBarFill} style={{ width: `${Math.min(100, window.percent)}%`, background: level.colorVar }} />
@@ -787,7 +787,7 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
             ))}
           </div>
           {activeTab === 'overview' ? (
-            <OverviewTab t={t} summary={summary} />
+            <OverviewTab t={t} summary={summary} costCurrency={balance?.costCurrency ?? ''} />
           ) : null}
           {activeTab === 'models' ? (
             <ModelsTab t={t} summary={summary} segments={segments} hitRateSeries={hitRateSeries} costSeries={costSeries} costAllZero={costAllZero} />
