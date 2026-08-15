@@ -116,6 +116,43 @@ describe('SessionUsageButton', () => {
     expect(screen.getByText(/provider does not expose an endpoint/)).toBeTruthy()
   })
 
+  it('配额制（opencode-go）隐藏账户余额行，金额制保留', () => {
+    const quota = {
+      rolling: { percent: 1, resetsAt: null },
+      weekly: { percent: 42, resetsAt: null },
+      monthly: { percent: 21, resetsAt: null },
+    }
+    render(<SessionUsageButton
+      t={t}
+      state={baseState({
+        open: true,
+        perSession: session,
+        balance: { balance: 5, currency: 'CNY', updatedAt: null, error: null, source: null, quota },
+      })}
+      onToggle={() => {}}
+    />)
+    // 配额三行都在
+    expect(screen.getByText('1%')).toBeTruthy()
+    expect(screen.getByText('42%')).toBeTruthy()
+    expect(screen.getByText('21%')).toBeTruthy()
+    // 不再显示「账户余额」标签（t 直接透传 key）
+    expect(screen.queryByText(/session\.balance/)).toBeNull()
+    expect(screen.queryByText(/5 CNY/)).toBeNull()
+    cleanup()
+    // 金额制（quota 为 null）：余额行保留
+    render(<SessionUsageButton
+      t={t}
+      state={baseState({
+        open: true,
+        perSession: session,
+        balance: { balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null },
+      })}
+      onToggle={() => {}}
+    />)
+    expect(screen.getByText(/session\.balance/)).toBeTruthy()
+    expect(screen.getByText(/12\.34 CNY/)).toBeTruthy()
+  })
+
   it('点击按钮触发切换回调', () => {
     const onToggle = vi.fn()
     render(<SessionUsageButton t={t} state={baseState()} onToggle={onToggle} />)

@@ -409,13 +409,14 @@ export function SessionUsageButton(props: {
               </div>
             ) : null}
             <div className={styles.footerFlex}>
-              <span className={styles.balanceText}>
-                {t('session.balance')}: <strong className={styles.balanceVal}>{balance === null ? '-' : quota !== null
-                  ? `${quota.monthly?.percent ?? 0}%`
-                  : balance.balance === null
+              {/* 配额制 provider（opencode-go 等）：账户余额即三窗口配额，不再重复显示余额行 */}
+              {quota === null ? (
+                <span className={styles.balanceText}>
+                  {t('session.balance')}: <strong className={styles.balanceVal}>{balance === null ? '-' : balance.balance === null
                     ? (balance.error ?? t('balance.unavailable'))
                     : `${balance.balance} ${balance.currency}`}</strong>
-              </span>
+                </span>
+              ) : null}
               <button type="button" onClick={handleCopySummary} className={`${styles.btnCopy} ${copied ? styles.btnCopyCopied : ''}`}>
                 {copied ? <CheckIcon /> : <CopyIcon />}
                 <span>{copied ? t('session.copied') : t('session.copy')}</span>
