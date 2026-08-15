@@ -283,16 +283,6 @@ function formatCnTokens(tokens: number): string {
   return String(tokens)
 }
 
-/** Y 轴上限取整到 1/2/5×10^n，保证刻度整洁（无数据时兜底为 1）。 */
-function niceAxisMax(value: number): number {
-  if (value <= 0) return 1
-  const exp = Math.floor(Math.log10(value))
-  const base = 10 ** exp
-  const factor = value / base
-  const nice = factor <= 1 ? 1 : factor <= 2 ? 2 : factor <= 5 ? 5 : 10
-  return nice * base
-}
-
 /** 桶内模型分段：tokens 降序 Top 5 + 「其他」聚合，取色与模型占比 Donut 一致。 */
 function bucketSegments(
   point: { byModel: Array<{ model: string; tokens: number }> },
@@ -326,8 +316,9 @@ function TrendAreaChart(props: {
   if (series.length < 2) {
     return <p className={styles.status}>{t('chart.insufficientData')}</p>
   }
-  // Y 轴上限：数据最大值放大到 1/0.8 后取整，最高柱占纵轴高度 ≤ 80%（顶部留白更舒展）
-  const axisMax = niceAxisMax(Math.max(...series.map((p) => p.tokens), 1e-9) / 0.8)
+  // Y 轴上限 = 数据最大值 / 0.8：最高柱严格占纵轴高度的 80%（顶部留白 20%）
+  const dataMax = Math.max(...series.map((p) => p.tokens), 0)
+  const axisMax = dataMax <= 0 ? 1 : dataMax / 0.8
   const innerH = height - padY * 2
   const y = (v: number): number => padY + innerH - (v / axisMax) * innerH
   // Y 轴刻度：0 / 25% / 50% / 75% / 100% × axisMax
