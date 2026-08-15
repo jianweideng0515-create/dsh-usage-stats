@@ -745,7 +745,10 @@ function QuotaTab(props: {
           </div>
         ) : null}
         <div className={styles.deepseekActions}>
-          <button type="button" className={styles.btnPrimary}>{t('balance.recharge')}</button>
+          {/* 充值：跳转 DeepSeek 官方充值页（新标签页打开） */}
+          <a className={styles.btnPrimary} href="https://platform.deepseek.com/top_up" target="_blank" rel="noopener noreferrer">
+            {t('balance.recharge')}
+          </a>
           <button type="button" className={styles.refresh} disabled={balanceRefreshing} onClick={onRefreshBalance}>
             {balanceRefreshing ? t('balance.refreshing') : t('balance.refresh')}
           </button>
