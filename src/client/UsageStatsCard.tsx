@@ -128,6 +128,106 @@ function MiniLine(props: {
 /** 折线图最少数据点（数据不足时折线无意义，显示占位文案）。 */
 const MIN_LINE_POINTS = 4
 
+/** Token 四分色（参考原型配色：输入蓝 / 缓存读绿 / 缓存写黄 / 输出紫）。 */
+const TOKEN_SPLIT_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1']
+
+/** Token 四分色堆叠拆分条 + 图例（参考原型 tokenSplitBar）。 */
+function TokenSplitBar(props: {
+  t: (key: string) => string
+  buckets: Array<{ label: string; tokens: number }>
+}): ReactElement {
+  const { t, buckets } = props
+  const total = buckets.reduce((sum, b) => sum + b.tokens, 0)
+  return (
+    <div className={styles.tokenSplit}>
+      <div className={styles.tokenStacked} role="img" aria-label={buckets.map((b, i) => `${b.label}: ${formatTokens(b.tokens)} (${total > 0 ? Math.round((b.tokens / total) * 100) : 0}%)`).join('; ')}>
+        {buckets.map((b, i) => (
+          <span
+            key={b.label}
+            className={styles.tokenStackedSeg}
+            style={{
+              width: total > 0 ? `${(b.tokens / total) * 100}%` : '0%',
+              background: TOKEN_SPLIT_COLORS[i % TOKEN_SPLIT_COLORS.length],
+            }}
+          />
+        ))}
+      </div>
+      <div className={styles.tokenLegend}>
+        {buckets.map((b, i) => (
+          <span key={b.label} className={styles.tokenItem}>
+            <span className={styles.dot} style={{ background: TOKEN_SPLIT_COLORS[i % TOKEN_SPLIT_COLORS.length] }} />
+            {b.label} {formatTokens(b.tokens)}
+            <span className={styles.tokenShare}>{total > 0 ? `${Math.round((b.tokens / total) * 100)}%` : '0%'}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** 用量趋势面积折线（无库 SVG）：网格线 + 渐变面积 + 折线 + 数据点 + 日期刻度。 */
+function TrendAreaChart(props: {
+  t: (key: string) => string
+  series: Array<{ bucket: string; tokens: number }>
+}): ReactElement {
+  const { t, series } = props
+  const width = 600
+  const height = 140
+  const padY = 12
+  const padX = 4
+  if (series.length < 2) {
+    return <p className={styles.status}>{t('chart.insufficientData')}</p>
+  }
+  const max = Math.max(...series.map((p) => p.tokens), 1e-9)
+  const min = Math.min(...series.map((p) => p.tokens))
+  const span = Math.max(max - min, 1e-9)
+  const innerH = height - padY * 2
+  const x = (i: number): number => padX + (i * (width - padX * 2)) / (series.length - 1)
+  const y = (v: number): number => padY + innerH - ((v - min) / span) * innerH
+  const line = series.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.tokens).toFixed(1)}`).join(' ')
+  const area = `${line} L${x(series.length - 1).toFixed(1)},${height} L${x(0).toFixed(1)},${height} Z`
+  return (
+    <div className={styles.trendChart}>
+      <svg
+        className={styles.trendSvg}
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={series.map((p) => `${p.bucket}: ${formatTokens(p.tokens)}`).join('; ')}
+      >
+        <defs>
+          <linearGradient id="trendAreaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--dsw-alias-state-business-primary)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="var(--dsw-alias-state-business-primary)" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {/* 网格线（三等分） */}
+        {[0, 1, 2, 3].map((i) => (
+          <line
+            key={i}
+            x1={padX} x2={width - padX}
+            y1={(padY + (innerH * i) / 3).toFixed(1)}
+            y2={(padY + (innerH * i) / 3).toFixed(1)}
+            stroke="var(--dsw-alias-border-l2)"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+        <path d={area} fill="url(#trendAreaGrad)" />
+        <path d={line} fill="none" stroke="var(--dsw-alias-state-business-primary)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        {series.map((p, i) => (
+          <circle key={p.bucket} cx={x(i).toFixed(1)} cy={y(p.tokens).toFixed(1)} r="3" fill="var(--dsw-alias-state-business-primary)" stroke="var(--dsw-alias-bg-layer-3)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+        ))}
+      </svg>
+      <div className={styles.trendAxis}>
+        {series.map((p) => (
+          <span key={p.bucket} className={styles.trendTick}>{p.bucket.slice(5)}</span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /** 提供商维度（影响 KPI 动态卡与配额/余额视图）。 */
 export type ProviderId = 'opencode' | 'deepseek' | 'openai' | 'ollama'
 
@@ -138,15 +238,14 @@ const PROVIDERS: Array<{ key: ProviderId; labelKey: string }> = [
   { key: 'ollama', labelKey: 'provider.ollama' },
 ]
 
-/** 用量概览 Tab 内容：KPI 4 卡 + Token 四分色拆分 + 趋势柱状 + 模型明细。 */
+/** 用量概览 Tab 内容：KPI 4 卡 + Token 四分色拆分 + 趋势面积图 + 模型明细。 */
 function OverviewTab(props: {
   t: (key: string) => string
   summary: SummaryResponse
   provider: ProviderId
   balance: BalanceResponse | null
-  maxSeries: number
 }): ReactElement {
-  const { t, summary, provider, balance, maxSeries } = props
+  const { t, summary, provider, balance } = props
   // KPI 卡 4：提供商动态卡（配额 / 余额 / 额度 / 本地）
   let dynamicValue = '-'
   let dynamicChip = ''
@@ -204,22 +303,17 @@ function OverviewTab(props: {
           <dd className={styles.kpiSub}>{dynamicSub}</dd>
         </div>
       </div>
-      <div className={styles.tokenSplit}>
-        <span className={styles.tokenItem}><span className={styles.dot} style={{ background: '#3b82f6' }} />{t('tokens.input')} {formatTokens(summary.tokens.uncachedInputTokens)}</span>
-        <span className={styles.tokenItem}><span className={styles.dot} style={{ background: '#10b981' }} />{t('tokens.cacheRead')} {formatTokens(summary.tokens.cacheReadTokens)}</span>
-        <span className={styles.tokenItem}><span className={styles.dot} style={{ background: '#f59e0b' }} />{t('tokens.cacheWrite')} {formatTokens(summary.tokens.cacheWriteTokens)}</span>
-        <span className={styles.tokenItem}><span className={styles.dot} style={{ background: '#6366f1' }} />{t('tokens.output')} {formatTokens(summary.tokens.outputTokens)}</span>
-      </div>
+      <TokenSplitBar
+        t={t}
+        buckets={[
+          { label: t('tokens.input'), tokens: summary.tokens.uncachedInputTokens },
+          { label: t('tokens.cacheRead'), tokens: summary.tokens.cacheReadTokens },
+          { label: t('tokens.cacheWrite'), tokens: summary.tokens.cacheWriteTokens },
+          { label: t('tokens.output'), tokens: summary.tokens.outputTokens },
+        ]}
+      />
       <h4 className={styles.heading}>{t('trend.title')}</h4>
-      <div className={styles.bars}>
-        {summary.series.map((p) => (
-          <div key={p.bucket} className={styles.barCol} title={`${p.bucket}: ${p.requests} ${t('metric.requests')}, ${formatTokens(p.tokens)} tok`}>
-            <span className={styles.barValue}>{formatTokens(p.tokens)}</span>
-            <div className={styles.bar} style={{ height: maxSeries > 0 ? `${Math.max(4, (p.tokens / maxSeries) * 100)}%` : '4%' }} />
-            <span className={styles.barBucket}>{p.bucket.slice(5)}</span>
-          </div>
-        ))}
-      </div>
+      <TrendAreaChart t={t} series={summary.series} />
       {summary.perSession !== null ? (
         <dl className={styles.metrics}>
           <div><dt>{t('metric.lastHit')}</dt><dd>{summary.perSession.lastRequestHitRate === null ? '-' : formatRate(summary.perSession.lastRequestHitRate)}</dd></div>
@@ -436,10 +530,6 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
   const { t, summary, balance, loading, error } = props
   const [activeTab, setActiveTab] = useState<'overview' | 'models' | 'quota'>('overview')
   const [provider, setProvider] = useState<ProviderId>('opencode')
-  const maxSeries = useMemo(() => {
-    if (summary === null || summary.series.length === 0) return 0
-    return Math.max(...summary.series.map((p) => p.tokens))
-  }, [summary])
   const segments = useMemo(() => summary === null ? [] : donutSegments(summary.byModel), [summary])
   const donutStyle = useMemo(() => {
     if (segments.length === 0) return undefined
@@ -524,7 +614,7 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
             ))}
           </div>
           {activeTab === 'overview' ? (
-            <OverviewTab t={t} summary={summary} provider={provider} balance={balance} maxSeries={maxSeries} />
+            <OverviewTab t={t} summary={summary} provider={provider} balance={balance} />
           ) : null}
           {activeTab === 'models' ? (
             <ModelsTab t={t} summary={summary} segments={segments} donutStyle={donutStyle} hitRateSeries={hitRateSeries} costSeries={costSeries} costAllZero={costAllZero} />

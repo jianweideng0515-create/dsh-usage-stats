@@ -546,11 +546,40 @@
 
 .tokenSplit {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
+  flex-direction: column;
+  gap: 8px;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-secondary);
+  min-width: 0;
+}
+
+/* Token 四分色堆叠条 */
+.tokenStacked {
+  display: flex;
+  width: 100%;
+  height: 10px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-layer-3);
+  border: 1px solid var(--dsw-alias-border-l2);
+}
+
+.tokenStackedSeg {
+  height: 100%;
+  min-width: 0;
+  transition: width 0.3s ease;
+}
+
+.tokenLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.tokenShare {
+  font-size: 10px;
+  color: var(--dsw-alias-label-tertiary);
 }
 
 .heading {
@@ -560,28 +589,37 @@
   color: var(--dsw-alias-label-primary);
 }
 
-.bars {
+/* 用量趋势面积折线 */
+.trendChart {
   display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 96px;
+  flex-direction: column;
+  gap: 6px;
   min-width: 0;
-  overflow: hidden;
+  padding: 10px 12px 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-2);
 }
 
-.barCol {
-  display: flex;
-  align-items: flex-end;
-  flex: 1 1 0;
-  height: 100%;
-  min-width: 0;
-}
-
-.bar {
+.trendSvg {
   width: 100%;
-  border-radius: 2px 2px 0 0;
-  background: var(--dsw-alias-button-info-fill);
-  align-self: flex-end;
+  height: 140px;
+  display: block;
+}
+
+.trendAxis {
+  display: flex;
+  justify-content: space-between;
+  gap: 2px;
+  border-top: 1px solid var(--dsw-alias-border-l2);
+  padding-top: 6px;
+}
+
+.trendTick {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-tertiary);
+  white-space: nowrap;
 }
 
 .table {
@@ -814,52 +852,6 @@
   font-size: 11px;
   color: var(--dsw-alias-label-secondary);
   font-variant-numeric: tabular-nums;
-}
-
-/* Token 趋势柱状（主视觉）：柱顶数值 + 桶标签 */
-
-.barCol {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-  flex: 1 1 0;
-  height: 100%;
-  min-width: 0;
-}
-
-.barValue {
-  font-size: 9px;
-  font-variant-numeric: tabular-nums;
-  color: var(--dsw-alias-label-tertiary);
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.13s;
-}
-
-.barCol:hover .barValue {
-  opacity: 1;
-}
-
-.bar {
-  width: 100%;
-  min-height: 2px;
-  border-radius: 2px 2px 0 0;
-  background: linear-gradient(180deg, var(--dsw-alias-state-business-primary), var(--dsw-alias-button-info-fill));
-  align-self: flex-end;
-  transition: filter 0.13s;
-}
-
-.barCol:hover .bar {
-  filter: brightness(1.25);
-}
-
-.barBucket {
-  font-size: 9px;
-  font-variant-numeric: tabular-nums;
-  color: var(--dsw-alias-label-tertiary);
-  white-space: nowrap;
 }
 
 /* 图表区：donut + 折线并排 */
@@ -1569,8 +1561,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .kpiCard,
-  .bar,
-  .barValue,
+  .tokenStackedSeg,
   .sessionUsage,
   .sessionUsageActive,
   .chevronIcon {
