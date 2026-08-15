@@ -1,8 +1,34 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+// The npm SDK's client half is a closure-factory bundle (window.__ModuleLoader__),
+// not importable under vitest; stub the store factory the controller uses.
+const { mockStores } = vi.hoisted(() => ({ mockStores: new Map<string, { get: () => unknown; set: (v: unknown) => void }>() }))
+vi.mock('@deepseek-ai/dsh-client-runtime/client', () => ({
+  createSnapshotStore: (init: unknown) => {
+    const store = {
+      get: () => init,
+      set: (next: unknown) => { init = next },
+      subscribe: () => () => {},
+    }
+    mockStores.set(`store-${mockStores.size}`, store)
+    return store
+  },
+  SnapshotStore: {},
+}))
 import type { PerSession } from '../../src/client/api.ts'
-import { SessionUsageButton } from '../../src/client/session-usage.tsx'
+import { SessionUsageButton, SessionUsageController } from '../../src/client/session-usage.tsx'
 import type { SessionUsageStore } from '../../src/client/session-usage.tsx'
+
+/** 会话切换测试用的 mock 响应（vi.hoisted 满足 vi.mock 工厂的 hoisting 约束）。 */
+const { mockSessionResponses } = vi.hoisted(() => ({
+  mockSessionResponses: new Map<string, PerSession>(),
+}))
+
+vi.mock('../../src/client/api.ts', () => ({
+  fetchSessionUsage: vi.fn((sid: string) => Promise.resolve(mockSessionResponses.get(sid) ?? null)),
+  fetchBalance: vi.fn(() => Promise.resolve({ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null })),
+  refreshBalance: vi.fn(() => Promise.resolve({ balance: null, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null })),
+}))
 
 /** 文件级清理：每个用例后卸载 DOM（vitest 未开 globals，无自动 cleanup）。 */
 afterEach(() => cleanup())
@@ -82,6 +108,26 @@ describe('SessionUsageButton', () => {
     render(<SessionUsageButton t={t} state={baseState()} onToggle={onToggle} />)
     fireEvent.click(screen.getByRole('button'))
     expect(onToggle).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('SessionUsageController 切换会话', () => {
+  it('切换会话立即清空旧数据并重新拉取', async () => {
+    mockSessionResponses.set('s-a', { ...session, sessionId: 's-a', turns: 1, lastTurnTokens: 100 })
+    mockSessionResponses.set('s-b', { ...session, sessionId: 's-b', turns: 9, lastTurnTokens: 900 })
+    const { fetchSessionUsage } = await import('../../src/client/api.ts')
+    const fetchSessionUsageMock = fetchSessionUsage as unknown as ReturnType<typeof vi.fn>
+    const controller = new SessionUsageController()
+    controller.inject('s-a')
+    controller.toggle() // 打开面板 → 拉取 s-a
+    await new Promise((r) => setTimeout(r, 20))
+    const face = controller.inject('s-b') // 切换会话
+    await new Promise((r) => setTimeout(r, 20))
+    const snapshot = face.hooks.sessionUsage.get()
+    expect(snapshot.perSession?.sessionId).toBe('s-b')
+    expect(snapshot.perSession?.turns).toBe(9)
+    expect(fetchSessionUsageMock.mock.calls.some((c) => c[0] === 's-b')).toBe(true)
+    fetchSessionUsageMock.mockClear()
   })
 })
 

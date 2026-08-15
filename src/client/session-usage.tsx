@@ -128,9 +128,21 @@ export class SessionUsageController {
     this.publish()
   }
 
-  /** session scope 注入：框架传入当前会话 ID。 */
+  /**
+   * session scope 注入：框架在每次会话渲染时传入当前会话 ID。
+   * 切换会话时立即清空旧会话数据并重新拉取（面板开启时），
+   * 避免停留在上一个会话的用量上。
+   */
   inject(sessionId: string): SessionUsageFace {
-    this.sessionId = sessionId
+    if (this.sessionId !== sessionId) {
+      this.sessionId = sessionId
+      this.perSession = null
+      this.error = null
+      if (this.open) {
+        void this.poll()
+      }
+      this.publish()
+    }
     return {
       hooks: { sessionUsage: this.store },
       onToggle: () => this.toggle(),
