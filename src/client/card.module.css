@@ -767,18 +767,66 @@
 
 .sessionUsagePanel {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   right: 0;
-  z-index: 40;
-  min-width: 220px;
-  padding: 10px 12px;
+  /* 高于会话头部其他浮层（模型选择等）；宽度防溢出视口 */
+  z-index: 100;
+  width: 264px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px 8px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 8px;
   background: var(--dsw-alias-bg-layer-2);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.28);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  /* 指向按钮的小箭头 */
+  animation: usagePanelIn 150ms ease-out;
+}
+
+.sessionUsagePanel::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 10px;
+  height: 10px;
+  border-left: 1px solid var(--dsw-alias-border-l2);
+  border-top: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  transform: rotate(45deg);
+}
+
+@keyframes usagePanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sessionUsageGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* 分组分隔：首组无上边线，后续组用细线隔开 */
+.sessionUsageGroup + .sessionUsageGroup {
+  border-top: 1px solid var(--dsw-alias-border-l2);
+  padding-top: 8px;
+}
+
+.sessionUsageGroupTitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-tertiary);
+  letter-spacing: 0.02em;
 }
 
 .sessionUsageMetrics {
@@ -819,5 +867,8 @@
   .sessionUsage,
   .sessionUsageActive {
     transition: none;
+  }
+  .sessionUsagePanel {
+    animation: none;
   }
 }

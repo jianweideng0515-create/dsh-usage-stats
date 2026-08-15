@@ -5,6 +5,9 @@ export interface UsageStatsCopy {
   'settings.enabled': string
   'settings.enabledHint': string
   'session.usage': string
+  'session.group.request': string
+  'session.group.session': string
+  'session.group.account': string
   'range.last7': string
   'range.last14': string
   'range.last30': string
@@ -74,6 +77,9 @@ export const zh: UsageStatsCopy = {
   'settings.enabled': '启用用量统计',
   'settings.enabledHint': '关闭后停止统计与余额刷新。',
   'session.usage': '用量',
+  'session.group.request': '最近请求',
+  'session.group.session': '会话累计',
+  'session.group.account': '账户',
   'range.last7': '最近 7 天',
   'range.last14': '最近 14 天',
   'range.last30': '最近 30 天',
@@ -140,6 +146,9 @@ export const en: UsageStatsCopy = {
   'settings.enabled': 'Enable usage stats',
   'settings.enabledHint': 'When off, tracking and balance refresh stop.',
   'session.usage': 'Usage',
+  'session.group.request': 'Last request',
+  'session.group.session': 'Session totals',
+  'session.group.account': 'Account',
   'range.last7': 'Last 7 days',
   'range.last14': 'Last 14 days',
   'range.last30': 'Last 30 days',

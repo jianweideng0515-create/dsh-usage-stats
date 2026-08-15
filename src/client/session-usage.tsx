@@ -178,18 +178,33 @@ export function SessionUsageButton(props: {
           {state.loading && session === null ? <p className={styles.status}>{t('loading')}</p> : null}
           {state.error !== null ? <p className={styles.status}>{t('error')}: {state.error}</p> : null}
           {session !== null ? (
-            <dl className={styles.sessionUsageMetrics}>
-              <div><dt>{t('metric.lastHit')}</dt><dd>{session.lastRequestHitRate === null ? '-' : formatRate(session.lastRequestHitRate)}</dd></div>
-              <div><dt>{t('metric.lastCost')}</dt><dd>{session.lastRequestCost === null ? '-' : formatCost(session.lastRequestCost)}</dd></div>
-              <div><dt>{t('metric.turns')}</dt><dd>{session.turns}</dd></div>
-              <div><dt>{t('metric.sessionTurns')}</dt><dd>{session.turns}</dd></div>
-              <div><dt>{t('metric.sessionCost')}</dt><dd>{formatCost(session.cost)}</dd></div>
-              <div><dt>{t('metric.avgHitRate')}</dt><dd>{formatRate(sessionHitRate(session))}</dd></div>
-              <div><dt>{t('metric.tokens')}</dt><dd>{formatTokens(tokensTotal)}</dd></div>
-              <div><dt>{t('balance.title')}</dt><dd>{state.balance === null ? '-' : state.balance.balance === null
-                ? (state.balance.error ?? t('balance.unavailable'))
-                : `${state.balance.balance} ${state.balance.currency}`}</dd></div>
-            </dl>
+            <>
+              <div className={styles.sessionUsageGroup}>
+                <span className={styles.sessionUsageGroupTitle}>{t('session.group.request')}</span>
+                <dl className={styles.sessionUsageMetrics}>
+                  <div><dt>{t('metric.lastHit')}</dt><dd>{session.lastRequestHitRate === null ? '-' : formatRate(session.lastRequestHitRate)}</dd></div>
+                  <div><dt>{t('metric.lastCost')}</dt><dd>{session.lastRequestCost === null ? '-' : formatCost(session.lastRequestCost)}</dd></div>
+                </dl>
+              </div>
+              <div className={styles.sessionUsageGroup}>
+                <span className={styles.sessionUsageGroupTitle}>{t('session.group.session')}</span>
+                <dl className={styles.sessionUsageMetrics}>
+                  <div><dt>{t('metric.turns')}</dt><dd>{session.turns}</dd></div>
+                  <div><dt>{t('metric.sessionTurns')}</dt><dd>{session.turns}</dd></div>
+                  <div><dt>{t('metric.sessionCost')}</dt><dd>{formatCost(session.cost)}</dd></div>
+                  <div><dt>{t('metric.avgHitRate')}</dt><dd>{formatRate(sessionHitRate(session))}</dd></div>
+                  <div><dt>{t('metric.tokens')}</dt><dd>{formatTokens(tokensTotal)}</dd></div>
+                </dl>
+              </div>
+              <div className={styles.sessionUsageGroup}>
+                <span className={styles.sessionUsageGroupTitle}>{t('session.group.account')}</span>
+                <dl className={styles.sessionUsageMetrics}>
+                  <div><dt>{t('balance.title')}</dt><dd>{state.balance === null ? '-' : state.balance.balance === null
+                    ? (state.balance.error ?? t('balance.unavailable'))
+                    : `${state.balance.balance} ${state.balance.currency}`}</dd></div>
+                </dl>
+              </div>
+            </>
           ) : null}
         </div>
       ) : null}
