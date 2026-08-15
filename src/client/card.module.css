@@ -1133,6 +1133,40 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 配额详情行（滚动/每周/每月 + 重置倒计时） */
+.quotaRows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.quotaRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.6875rem;
+}
+
+.quotaLabel {
+  color: var(--dsw-alias-label-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.quotaPercent {
+  color: var(--dsw-alias-label-primary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.quotaReset {
+  color: var(--dsw-alias-label-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .btnCopy {
   font: inherit;
   font-size: 0.625rem;

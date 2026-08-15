@@ -45,6 +45,9 @@ export interface SessionRecord {
   lastRequestHitRate: number | null
   /** 最近一次有 usage 的请求的 token 合计（最近单次消耗展示）。 */
   lastRequestTokens: number | null
+  /** 最近一轮对话（一次发送信息触发的完整 turn）的消耗合计。 */
+  lastTurnTokens: number | null
+  lastTurnCost: number | null
 }
 
 /** 完整聚合状态（持久化形状）。 */
@@ -58,6 +61,9 @@ export interface UsageStatsState {
 export interface SessionFold {
   currentModel: string | null
   pending: PendingUsage | null
+  /** 当前轮（turn）的累计消耗：turn/start 重置，settle 累加，turn/end 落盘。 */
+  turnTokens: number
+  turnCost: number
 }
 
 /** 当前 step 已记账的用量（替换语义的基准）。 */
@@ -135,11 +141,21 @@ export class UsageStatsMeter {
     const fold = this.foldOf(sessionId, workspace)
     const date = localDateKey(event.time)
     switch (event.type) {
+      case 'turn/start': {
+        // 新一轮开始：重置"当前轮消耗"（用户每发一次信息即新一轮）
+        fold.turnTokens = 0
+        fold.turnCost = 0
+        break
+      }
       case 'turn/end': {
+        // 轮完成：把当前轮消耗落盘为"最近一轮"（进行中的轮不落盘）
+        const session = this.sessionOf(sessionId)
+        session.lastTurnTokens = fold.turnTokens
+        session.lastTurnCost = fold.turnCost
         if (event.data.reason.kind !== 'completed') break
         addInto(this.data.totals, { turns: 1 })
         addInto(this.day(date).bucket, { turns: 1 })
-        this.sessionOf(sessionId).turns += 1
+        session.turns += 1
         break
       }
       case 'step/start': {
@@ -223,6 +239,10 @@ export class UsageStatsMeter {
     session.lastRequestCost = cost
     session.lastRequestHitRate = rate
     session.lastRequestTokens = buckets.uncachedInputTokens + buckets.cacheReadTokens + buckets.cacheWriteTokens + buckets.outputTokens
+    // 当前轮消耗：替换语义下按差值调整（与全局记账一致）
+    fold.turnTokens += buckets.uncachedInputTokens + buckets.cacheReadTokens + buckets.cacheWriteTokens + buckets.outputTokens
+      - (prev?.buckets.uncachedInputTokens ?? 0) - (prev?.buckets.cacheReadTokens ?? 0) - (prev?.buckets.cacheWriteTokens ?? 0) - (prev?.buckets.outputTokens ?? 0)
+    fold.turnCost += cost - (prev?.cost ?? 0)
     // 会话累计与全局聚合同一替换语义：同 (turn,step) 的二次上报按差值调整。
     session.cost += cost - (prev?.cost ?? 0)
     session.uncachedInputTokens += buckets.uncachedInputTokens - (prev?.buckets.uncachedInputTokens ?? 0)
@@ -243,8 +263,20 @@ export class UsageStatsMeter {
       record.cacheWriteTokens ??= 0
       record.outputTokens ??= 0
       record.lastRequestTokens ??= null
+      record.lastTurnTokens ??= null
+      record.lastTurnCost ??= null
     }
     this.folds.clear()
+  }
+
+  /**
+   * 当前轮的实时消耗（进行中的 turn 累计；无进行中轮时返回 null）。
+   * 供会话页"本次消耗"展示：每发一次信息（新一轮）自动重置。
+   */
+  currentTurnUsage(sessionId: string): { tokens: number; cost: number } | null {
+    const fold = this.folds.get(sessionId)
+    if (fold === undefined) return null
+    return { tokens: fold.turnTokens, cost: fold.turnCost }
   }
 
   /** 替换费用计算器（配置热更新用）。 */
@@ -289,6 +321,8 @@ export class UsageStatsMeter {
         lastRequestCost: null,
         lastRequestHitRate: null,
         lastRequestTokens: null,
+        lastTurnTokens: null,
+        lastTurnCost: null,
       }
       this.data.sessions[sessionId] = session
     }
@@ -298,7 +332,7 @@ export class UsageStatsMeter {
   private foldOf(sessionId: string, workspace: string | null): SessionFold {
     let fold = this.folds.get(sessionId)
     if (fold === undefined) {
-      fold = { currentModel: null, pending: null }
+      fold = { currentModel: null, pending: null, turnTokens: 0, turnCost: 0 }
       this.folds.set(sessionId, fold)
     }
     const session = this.sessionOf(sessionId)

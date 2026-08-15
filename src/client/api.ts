@@ -39,6 +39,11 @@ export interface PerSession {
   lastRequestHitRate: number | null
   /** 最近一次有 usage 的请求的 token 合计。 */
   lastRequestTokens: number | null
+  /** 最近一轮对话（一次发送信息触发的完整 turn）的消耗合计。 */
+  lastTurnTokens: number | null
+  lastTurnCost: number | null
+  /** 当前进行中一轮的实时消耗；无进行中轮为 null。 */
+  currentTurn: { tokens: number; cost: number } | null
 }
 
 export interface SummaryResponse {
@@ -57,10 +62,15 @@ export interface SummaryResponse {
   perSession: PerSession | null
 }
 
-export interface UsageQuota {
+export interface QuotaWindow {
   percent: number
-  window: 'rolling' | 'weekly' | 'monthly'
   resetsAt: string | null
+}
+
+export interface UsageQuota {
+  rolling: QuotaWindow | null
+  weekly: QuotaWindow | null
+  monthly: QuotaWindow | null
 }
 
 export interface BalanceResponse {

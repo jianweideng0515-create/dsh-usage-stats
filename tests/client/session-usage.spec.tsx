@@ -13,6 +13,8 @@ const session: PerSession = {
   uncachedInputTokens: 1000, cacheReadTokens: 9000, cacheWriteTokens: 0, outputTokens: 500,
   lastRequestAt: null, lastModel: 'deepseek-chat',
   lastRequestCost: 0.05, lastRequestHitRate: 0.4, lastRequestTokens: 1200,
+  lastTurnTokens: 5000, lastTurnCost: 0.08,
+  currentTurn: null,
 }
 
 function baseState(overrides: Partial<SessionUsageStore> = {}): SessionUsageStore {
@@ -46,11 +48,9 @@ describe('SessionUsageButton', () => {
       onToggle={() => {}}
     />)
     expect(screen.getByRole('button', { expanded: true })).toBeTruthy()
-    // 状态徽标
-    expect(screen.getByText('session.statusOk')).toBeTruthy()
-    // 本次命中 40.00%（hitBadge）；本次费用 0.0500（strongText）
+    // 本次命中 40.00%（hitBadge）；本次费用 = 本轮消耗 0.0800（lastTurnCost，无进行中轮）
     expect(screen.getByText('40.00%')).toBeTruthy()
-    expect(screen.getByText('0.0500')).toBeTruthy()
+    expect(screen.getByText('0.0800')).toBeTruthy()
     // 完成轮次：metaValText "5 次"
     expect(screen.getByText('5 次')).toBeTruthy()
     // 会话总费用 0.3500（hero statNumber；按钮上同值出现两次）

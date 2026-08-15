@@ -23,6 +23,11 @@ export interface UsageStatsCopy {
   'quota.monthly': string
   'quota.weekly': string
   'quota.rolling': string
+  'quota.days': string
+  'quota.hours': string
+  'quota.minutes': string
+  'quota.after': string
+  'quota.resetSoon': string
   'range.last7': string
   'range.last14': string
   'range.last30': string
@@ -107,9 +112,14 @@ export const zh: UsageStatsCopy = {
   'session.copied': '已复制',
   'session.balance': '账户余额',
   'session.unpricedHint': '* 该模型未配置单价，费用按 0 计（可在插件设置中配置价格）',
-  'quota.monthly': '月额度已用',
-  'quota.weekly': '周额度已用',
-  'quota.rolling': '滚动额度已用',
+  'quota.monthly': '每月用量',
+  'quota.weekly': '每周用量',
+  'quota.rolling': '滚动用量',
+  'quota.days': '天',
+  'quota.hours': '小时',
+  'quota.minutes': '分钟',
+  'quota.after': '后重置',
+  'quota.resetSoon': '即将重置',
   'range.last7': '最近 7 天',
   'range.last14': '最近 14 天',
   'range.last30': '最近 30 天',
@@ -191,9 +201,14 @@ export const en: UsageStatsCopy = {
   'session.copied': 'Copied',
   'session.balance': 'Account balance',
   'session.unpricedHint': '* Model has no configured price; cost counted as 0 (configure prices in plugin settings)',
-  'quota.monthly': 'Monthly quota used',
-  'quota.weekly': 'Weekly quota used',
-  'quota.rolling': 'Rolling quota used',
+  'quota.monthly': 'Monthly usage',
+  'quota.weekly': 'Weekly usage',
+  'quota.rolling': 'Rolling usage',
+  'quota.days': 'd',
+  'quota.hours': 'h',
+  'quota.minutes': 'min',
+  'quota.after': ' until reset',
+  'quota.resetSoon': 'Resets soon',
   'range.last7': 'Last 7 days',
   'range.last14': 'Last 14 days',
   'range.last30': 'Last 30 days',

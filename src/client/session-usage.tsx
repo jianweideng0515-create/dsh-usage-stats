@@ -4,7 +4,7 @@ import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-cli
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { fetchBalance, fetchSessionUsage } from './api.ts'
-import type { BalanceResponse, PerSession } from './api.ts'
+import type { BalanceResponse, PerSession, QuotaWindow } from './api.ts'
 import styles from './card.module.css'
 
 /**
@@ -155,15 +155,6 @@ function ChevronDownIcon(props: { open: boolean }): ReactElement {
   )
 }
 
-function CheckCircleIcon(): ReactElement {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-      <path d="m9 11 3 3L22 4" />
-    </svg>
-  )
-}
-
 function CopyIcon(): ReactElement {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -235,19 +226,39 @@ export function SessionUsageButton(props: {
   const recentHit = session?.lastRequestHitRate === null || session?.lastRequestHitRate === undefined ? null : session.lastRequestHitRate * 100
   const recentTokens = session?.lastRequestTokens === null || session?.lastRequestTokens === undefined ? null : session.lastRequestTokens
   const recentTokensCompact = recentTokens === null ? null : formatCompactTokens(recentTokens)
+  // 本次消耗 = 一轮对话的消耗：进行中的轮（每发一次信息自动重置）优先，
+  // 无进行中轮时回退最近完成的轮。
+  const currentTurn = session?.currentTurn ?? null
+  const turnTokens = currentTurn !== null ? currentTurn.tokens : (session?.lastTurnTokens ?? null)
+  const turnCost = currentTurn !== null ? currentTurn.cost : (session?.lastTurnCost ?? null)
+  const turnTokensCompact = turnTokens === null ? null : formatCompactTokens(turnTokens)
   const balance = state.balance
   // 有真实消耗但费用为 0：模型未配置单价（内置价格表外），费用按 0 计。
   const unpriced = session !== null && session.cost === 0 && tokensTotal > 0
-  // 订阅制配额（opencode-go /v1/usage）与金额（DeepSeek /user/balance）二选一展示。
-  const quotaLabel = balance?.quota === null || balance?.quota === undefined ? null
-    : balance.quota.window === 'monthly' ? t('quota.monthly')
-      : balance.quota.window === 'weekly' ? t('quota.weekly') : t('quota.rolling')
+
+  /** 重置倒计时：'2 天 3 小时后重置' / '5 小时后重置' / '30 分钟后重置'。 */
+  const formatReset = (resetsAt: string | null): string => {
+    if (resetsAt === null) return ''
+    const ms = Date.parse(resetsAt) - Date.now()
+    if (!Number.isFinite(ms) || ms <= 0) return t('quota.resetSoon')
+    const totalMinutes = Math.floor(ms / 60_000)
+    if (totalMinutes < 60) return `${totalMinutes} ${t('quota.minutes')}${t('quota.after')}`
+    const hours = Math.floor(totalMinutes / 60)
+    const days = Math.floor(hours / 24)
+    if (days > 0) {
+      const restHours = hours - days * 24
+      return restHours > 0 ? `${days} ${t('quota.days')} ${restHours} ${t('quota.hours')}${t('quota.after')}` : `${days} ${t('quota.days')}${t('quota.after')}`
+    }
+    return `${hours} ${t('quota.hours')}${t('quota.after')}`
+  }
 
   const handleCopySummary = (): void => {
     const sessionText = session === null ? '' : `Tokens: ${tokensTotal} | Cost: ${session.cost.toFixed(4)}`
     const summaryText = [
       sessionText,
-      `Balance: ${balance?.balance === null || balance === null ? '-' : `${balance.balance} ${balance.currency}`}`,
+      balance?.quota !== null && balance?.quota !== undefined
+        ? `Monthly quota: ${balance.quota.monthly?.percent ?? 0}%`
+        : `Balance: ${balance?.balance === null || balance === null ? '-' : `${balance.balance} ${balance.currency}`}`,
       `Avg Cache Hit: ${avgHit.toFixed(2)}%`,
     ].filter(Boolean).join(' | ')
     if (navigator.clipboard?.writeText !== undefined) {
@@ -256,6 +267,13 @@ export function SessionUsageButton(props: {
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1600)
   }
+
+  const quota = balance?.quota ?? null
+  const quotaRows = quota === null ? [] : ([
+    { key: 'rolling', label: t('quota.rolling'), window: quota.rolling },
+    { key: 'weekly', label: t('quota.weekly'), window: quota.weekly },
+    { key: 'monthly', label: t('quota.monthly'), window: quota.monthly },
+  ] as Array<{ key: string; label: string; window: QuotaWindow | null }>)
 
   return (
     <div className={styles.sessionUsageRoot} ref={rootRef}>
@@ -275,16 +293,12 @@ export function SessionUsageButton(props: {
       </button>
       {state.open ? (
         <div className={styles.sessionUsagePanel} role="dialog" aria-label={t('session.panelTitle')}>
-          {/* Header：标题 + 服务状态 */}
+          {/* Header：标题 */}
           <div className={styles.panelHeader}>
             <div className={styles.panelTitleGroup}>
               <PulseDot />
               <span className={styles.panelTitle}>{t('session.panelTitle')}</span>
             </div>
-            <span className={styles.statusBadge}>
-              <CheckCircleIcon />
-              {t('session.statusOk')}
-            </span>
           </div>
           {state.loading && session === null ? <p className={styles.panelStatus}>{t('loading')}</p> : null}
           {state.error !== null ? <p className={styles.panelStatus}>{t('error')}: {state.error}</p> : null}
@@ -323,7 +337,7 @@ export function SessionUsageButton(props: {
                   </div>
                 </div>
               </div>
-              {/* 最近单次请求卡 */}
+              {/* 最近单次对话（本轮）卡 */}
               <div>
                 <div className={styles.sectionTitle} style={{ marginBottom: '6px' }}>
                   {t('session.recentTitle')}
@@ -338,10 +352,10 @@ export function SessionUsageButton(props: {
                   </div>
                   <div className={styles.recentRowBottom}>
                     <span>
-                      {t('session.recentTokens')}: <strong className={styles.strongText}>{recentTokensCompact === null ? '-' : `${recentTokensCompact.value}${recentTokensCompact.unit} Tokens`}</strong>
+                      {t('session.recentTokens')}: <strong className={styles.strongText}>{turnTokensCompact === null ? '-' : `${turnTokensCompact.value}${turnTokensCompact.unit} Tokens`}</strong>
                     </span>
                     <span>
-                      {t('session.recentCost')}: <strong className={styles.strongText}>{session.lastRequestCost === null ? '-' : formatCost(session.lastRequestCost)}</strong>
+                      {t('session.recentCost')}: <strong className={styles.strongText}>{turnCost === null ? '-' : formatCost(turnCost)}</strong>
                     </span>
                   </div>
                 </div>
@@ -351,12 +365,23 @@ export function SessionUsageButton(props: {
               </div>
             </div>
           ) : null}
-          {/* Footer：账户余额/配额 + 复制摘要 */}
+          {/* Footer：配额/余额详情 + 复制摘要 */}
           <div className={styles.panelFooter}>
+            {quotaRows.length > 0 ? (
+              <div className={styles.quotaRows}>
+                {quotaRows.map((row) => (
+                  <div key={row.key} className={styles.quotaRow}>
+                    <span className={styles.quotaLabel}>{row.label}</span>
+                    <span className={styles.quotaPercent}>{row.window === null ? '-' : `${row.window.percent}%`}</span>
+                    <span className={styles.quotaReset}>{row.window === null ? '' : formatReset(row.window.resetsAt)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <div className={styles.footerFlex}>
               <span className={styles.balanceText}>
-                {t('session.balance')}: <strong className={styles.balanceVal}>{balance === null ? '-' : balance.quota !== null && balance.quota !== undefined
-                  ? `${quotaLabel} ${balance.quota.percent}%`
+                {t('session.balance')}: <strong className={styles.balanceVal}>{balance === null ? '-' : quota !== null
+                  ? `${quota.monthly?.percent ?? 0}%`
                   : balance.balance === null
                     ? (balance.error ?? t('balance.unavailable'))
                     : `${balance.balance} ${balance.currency}`}</strong>

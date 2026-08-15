@@ -1,13 +1,16 @@
 import type { BalanceEndpoint, BalanceSettings, DetectResult } from './provider-detect.ts'
 
-/** OpenCode 订阅配额快照（/v1/usage 的三个窗口之一；优先展示月度）。 */
-export interface UsageQuota {
-  /** 已用百分比 0-100。 */
+/** 单个配额窗口的用量与重置时间。 */
+export interface QuotaWindow {
   percent: number
-  /** 配额窗口。 */
-  window: 'rolling' | 'weekly' | 'monthly'
-  /** 重置时间（ISO）；接口未提供时为 null。 */
   resetsAt: string | null
+}
+
+/** OpenCode 订阅配额（/v1/usage）：滚动 / 每周 / 每月三个窗口。 */
+export interface UsageQuota {
+  rolling: QuotaWindow | null
+  weekly: QuotaWindow | null
+  monthly: QuotaWindow | null
 }
 
 /** 一次余额快照（路由响应形状）。金额与配额二选一：有 quota 时为订阅制。 */
@@ -54,15 +57,17 @@ export function parseBalanceResponse(body: unknown): { balance: number; currency
 
 /**
  * 解析 OpenCode 订阅配额响应（GET /v1/usage → { usage: { rolling/weekly/monthly:
- * { status, percent, resetsAt } } }）。优先月度窗口，其次周/滚动。
- * 格式不符返回 null。
+ * { status, percent, resetsAt } } }）。三个窗口全部提取；窗口缺失或格式
+ * 不符时为 null。整体格式不符（无任何窗口）返回 null。
  */
 export function parseOpenCodeUsage(body: unknown): UsageQuota | null {
   if (typeof body !== 'object' || body === null) return null
   const usage = (body as { usage?: unknown }).usage
   if (typeof usage !== 'object' || usage === null) return null
   const record = usage as Record<string, unknown>
-  for (const window of ['monthly', 'weekly', 'rolling'] as const) {
+  const quota: UsageQuota = { rolling: null, weekly: null, monthly: null }
+  let found = false
+  for (const window of ['rolling', 'weekly', 'monthly'] as const) {
     const entry = record[window]
     if (typeof entry !== 'object' || entry === null) continue
     const percent = (entry as { percent?: unknown }).percent
@@ -70,9 +75,10 @@ export function parseOpenCodeUsage(body: unknown): UsageQuota | null {
     if (!Number.isFinite(numeric)) continue
     const resetsAt = typeof (entry as { resetsAt?: unknown }).resetsAt === 'string'
       ? (entry as { resetsAt: string }).resetsAt : null
-    return { percent: numeric, window, resetsAt }
+    quota[window] = { percent: numeric, resetsAt }
+    found = true
   }
-  return null
+  return found ? quota : null
 }
 
 export class BalanceClient {

@@ -50,7 +50,7 @@ describe('BalanceClient', () => {
     expect(s.error).toContain('401')
   })
 
-  it('OpenCode /v1/usage 解析为配额快照（优先月度窗口）', async () => {
+  it('OpenCode /v1/usage 解析为三窗口配额快照', async () => {
     const c = client({
       fetchFn: (async () => resp({
         usage: {
@@ -65,9 +65,21 @@ describe('BalanceClient', () => {
     expect(s.error).toBeNull()
     expect(s.balance).toBeNull()
     expect(s.quota).not.toBeNull()
-    expect(s.quota?.window).toBe('monthly')
-    expect(s.quota?.percent).toBe(21)
-    expect(s.quota?.resetsAt).toContain('2026-09-14')
+    expect(s.quota?.rolling?.percent).toBe(0)
+    expect(s.quota?.weekly?.percent).toBe(42)
+    expect(s.quota?.monthly?.percent).toBe(21)
+    expect(s.quota?.monthly?.resetsAt).toContain('2026-09-14')
+  })
+
+  it('OpenCode 部分窗口缺失时其余窗口仍返回', async () => {
+    const c = client({
+      fetchFn: (async () => resp({ usage: { monthly: { status: 'ok', percent: 8, resetsAt: null } } })) as typeof fetch,
+    })
+    c.setDetect(() => ({ ok: true, endpoint: { baseUrl: 'https://opencode.ai/zen/go/v1', path: '/usage', apiKeyEnv: 'K', source: 'auto:opencode-go' } }))
+    const s = await c.refresh()
+    expect(s.quota?.monthly?.percent).toBe(8)
+    expect(s.quota?.weekly).toBeNull()
+    expect(s.quota?.rolling).toBeNull()
   })
 
   it('OpenCode 格式缺失时按 unexpected response 处理', async () => {

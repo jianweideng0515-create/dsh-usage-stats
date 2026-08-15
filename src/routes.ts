@@ -61,7 +61,13 @@ export function makeRoutes(ctx: Context, balance: BalanceClient): WebRoute[] {
       // 会话维度仅在显式携带 sessionId 时附带（会话页用量组件用）；
       // 设置页只统计总量，不带 sessionId 时 perSession 恒为 null。
       const sessionId = url.searchParams.get('sessionId')
-      const perSession = sessionId !== null ? (meter.state().sessions[sessionId] ?? null) : null
+      let perSession = null
+      if (sessionId !== null) {
+        const record = meter.state().sessions[sessionId] ?? null
+        // 当前轮的实时消耗（进行中的 turn；用户每发一次信息自动重置）
+        const currentTurn = meter.currentTurnUsage(sessionId)
+        perSession = record === null ? null : { ...record, currentTurn }
+      }
       writeJson(res, 200, { ...summary, perSession })
     },
   }

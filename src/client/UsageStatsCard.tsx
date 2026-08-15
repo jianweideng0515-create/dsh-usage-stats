@@ -303,7 +303,7 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
         <h4 className={styles.heading}>{t('balance.title')}</h4>
         {balance === null ? <p className={styles.status}>{t('loading')}</p> : balance.quota !== null && balance.quota !== undefined ? (
           <p>
-            {t('quota.' + balance.quota.window)}: {balance.quota.percent}%
+            {t('quota.rolling')}: {balance.quota.rolling?.percent ?? '-'}% · {t('quota.weekly')}: {balance.quota.weekly?.percent ?? '-'}% · {t('quota.monthly')}: {balance.quota.monthly?.percent ?? '-'}%
             {balance.updatedAt !== null ? ` (${t('balance.updated')}: ${new Date(balance.updatedAt).toLocaleString()})` : ''}
             {balance.source !== null ? ` (${t('balance.source')}: ${balance.source.source})` : ''}
           </p>
