@@ -325,8 +325,8 @@ const PROVIDERS: Array<{ key: ProviderId; labelKey: string }> = [
   { key: 'ollama', labelKey: 'provider.ollama' },
 ]
 
-/** 用量概览 Tab 内容：KPI 4 卡 + Token 四分色拆分 + 趋势面积图 + 模型明细。 */
-function OverviewTab(props: {
+/** 常驻 KPI 区：4 张 KPI 卡 + Token 四分色拆分（不随 Tab 切换）。 */
+function KpiOverview(props: {
   t: (key: string) => string
   summary: SummaryResponse
   provider: ProviderId
@@ -405,6 +405,18 @@ function OverviewTab(props: {
           { label: t('tokens.output'), tokens: summary.tokens.outputTokens },
         ]}
       />
+    </>
+  )
+}
+
+/** 用量概览 Tab 内容：趋势面积图 + 会话指标 + 模型明细（KPI 与 Token 拆分在 Tab 上方常驻）。 */
+function OverviewTab(props: {
+  t: (key: string) => string
+  summary: SummaryResponse
+}): ReactElement {
+  const { t, summary } = props
+  return (
+    <>
       <h4 className={styles.heading}>{t('trend.title')}</h4>
       <TrendAreaChart t={t} series={summary.series} />
       {summary.perSession !== null ? (
@@ -571,6 +583,11 @@ function QuotaTab(props: {
           ))}
         </div>
         <div className={styles.noticeBar}>
+          <svg className={styles.noticeIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+          </svg>
           <span>{t('quota.notice')}</span>
         </div>
       </div>
@@ -707,6 +724,8 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
       {error !== null ? <p className={styles.status}>{t('error')}: {error}</p> : null}
       {summary !== null ? (
         <>
+          {/* KPI 4 卡 + Token 拆分：常驻，不随 Tab 切换 */}
+          <KpiOverview t={t} summary={summary} provider={provider} balance={balance} />
           <div className={styles.tabNav}>
             {([
               { key: 'overview', labelKey: 'tab.overview' },
@@ -724,7 +743,7 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
             ))}
           </div>
           {activeTab === 'overview' ? (
-            <OverviewTab t={t} summary={summary} provider={provider} balance={balance} />
+            <OverviewTab t={t} summary={summary} />
           ) : null}
           {activeTab === 'models' ? (
             <ModelsTab t={t} summary={summary} segments={segments} hitRateSeries={hitRateSeries} costSeries={costSeries} costAllZero={costAllZero} />

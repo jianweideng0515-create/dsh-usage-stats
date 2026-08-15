@@ -87,9 +87,9 @@ describe('UsageStatsCard', () => {
     // 切到余额 Tab → 默认 opencode（无配额 → 不可用提示）
     fireEvent.click(screen.getByText('tab.quota'))
     expect(screen.getByText(/balance\.unavailable/)).toBeTruthy()
-    // 切到 DeepSeek → 金额余额 + 预计可用天数（cost 0.35 / activeDays 2 = 0.175/天 → 12.34/0.175 = 70 天）
+    // 切到 DeepSeek → 金额余额（KPI 动态卡 + 配额卡各一处）+ 预计可用天数
     fireEvent.click(screen.getByText('provider.deepseek'))
-    expect(screen.getByText(/12\.34/)).toBeTruthy()
+    expect(screen.getAllByText(/12\.34/).length).toBeGreaterThanOrEqual(2)
     expect(screen.getByText(/balance\.estimate/)).toBeTruthy()
     // 切到 Ollama → 本地模型占位卡
     fireEvent.click(screen.getByText('provider.ollama'))
