@@ -1169,12 +1169,6 @@
   flex: none;
 }
 
-.miniLine {
-  width: 100%;
-  height: 44px;
-  min-width: 0;
-}
-
 /* 会话页用量按钮 + 下拉面板（复刻参考设计，颜色映射 DSH 主题变量） */
 
 .sessionUsageRoot {

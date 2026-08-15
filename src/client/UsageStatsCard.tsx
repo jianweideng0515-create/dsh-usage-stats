@@ -197,48 +197,6 @@ function costSymbol(currency: string): string {
   return currency === '' ? '' : `${currency} `
 }
 
-/** 单条 SVG 折线（无库）：数据点不足阈值时返回 null，由调用方显示占位。 */
-function MiniLine(props: {
-  values: number[]
-  colorVar: string
-  dashed?: boolean
-  format: (value: number) => string
-}): ReactElement | null {
-  const { values, colorVar, dashed, format } = props
-  if (values.length < MIN_LINE_POINTS) return null
-  const width = 120
-  const height = 36
-  const max = Math.max(...values, 1e-9)
-  const min = Math.min(...values)
-  const span = Math.max(max - min, 1e-9)
-  const stepX = values.length > 1 ? width / (values.length - 1) : width
-  const points = values.map((v, i) => `${(i * stepX).toFixed(1)},${(height - 2 - ((v - min) / span) * (height - 4)).toFixed(1)}`).join(' ')
-  return (
-    <svg
-      className={styles.miniLine}
-      viewBox={`0 0 ${width} ${height}`}
-      role="img"
-      aria-label={values.map((v, i) => `${i}: ${format(v)}`).join('; ')}
-    >
-      <polyline
-        points={points}
-        fill="none"
-        stroke={colorVar}
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        strokeDasharray={dashed ? '3 2' : undefined}
-      />
-      {values.map((v, i) => (
-        <circle key={i} cx={(i * stepX).toFixed(1)} cy={(height - 2 - ((v - min) / span) * (height - 4)).toFixed(1)} r="1.6" fill={colorVar} />
-      ))}
-    </svg>
-  )
-}
-
-/** 折线图最少数据点（数据不足时折线无意义，显示占位文案）。 */
-const MIN_LINE_POINTS = 4
-
 /** Token 四分色（参考原型配色：输入蓝 / 缓存读绿 / 缓存写黄 / 输出紫）。 */
 const TOKEN_SPLIT_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1']
 
@@ -582,16 +540,13 @@ function OverviewTab(props: {
   )
 }
 
-/** 模型与缓存 Tab：donut 占比 + 缓存效率诊断 + 命中率/费用折线。 */
+/** 模型与缓存 Tab：donut 占比 + 缓存效率诊断。 */
 function ModelsTab(props: {
   t: (key: string) => string
   summary: SummaryResponse
   segments: Array<{ model: string; requests: number; share: number; colorVar: string }>
-  hitRateSeries: number[]
-  costSeries: number[]
-  costAllZero: boolean
 }): ReactElement {
-  const { t, summary, segments, hitRateSeries, costSeries, costAllZero } = props
+  const { t, summary, segments } = props
   // 缓存效率诊断：命中率（成功绿）+ 节省 Tokens + 节省比例
   const inputTotal = summary.tokens.uncachedInputTokens + summary.tokens.cacheReadTokens + summary.tokens.cacheWriteTokens
   const savedRatio = inputTotal > 0 ? (summary.tokens.cacheReadTokens / inputTotal) * 100 : 0
@@ -613,20 +568,6 @@ function ModelsTab(props: {
             <div className={styles.cacheDiagRow}><span>{t('chart.savedRatio')}</span><strong>{savedRatio.toFixed(1)}%</strong></div>
           </div>
         </div>
-      </div>
-      <div className={styles.chartCell}>
-        <h4 className={styles.heading}>{t('chart.hitRate')}</h4>
-        {hitRateSeries.length >= MIN_LINE_POINTS
-          ? <MiniLine values={hitRateSeries} colorVar="var(--dsw-alias-state-success-primary)" dashed format={formatRate} />
-          : <p className={styles.status}>{t('chart.insufficientData')}</p>}
-      </div>
-      <div className={styles.chartCell}>
-        <h4 className={styles.heading}>{t('chart.cost')}</h4>
-        {costAllZero
-          ? <p className={styles.status}>{t('chart.noCost')}</p>
-          : costSeries.length >= MIN_LINE_POINTS
-            ? <MiniLine values={costSeries} colorVar="var(--dsw-alias-state-business-primary)" format={formatCost} />
-            : <p className={styles.status}>{t('chart.insufficientData')}</p>}
       </div>
     </div>
   )
@@ -796,9 +737,6 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
   // 当前 provider 的余额/配额快照（多 provider 表按 provider id 取）
   const balance: BalanceResponse | null = balances?.[provider] ?? null
   const segments = useMemo(() => summary === null ? [] : donutSegments(summary.byModel), [summary])
-  const hitRateSeries = summary?.series.map((p) => p.hitRate) ?? []
-  const costSeries = summary?.series.map((p) => p.cost) ?? []
-  const costAllZero = summary !== null && summary.cost === 0 && summary.uncountedRequests > 0
 
   return (
     <div className={styles.content}>
@@ -874,7 +812,7 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
             <OverviewTab t={t} summary={summary} costCurrency={balance?.costCurrency ?? ''} />
           ) : null}
           {activeTab === 'models' ? (
-            <ModelsTab t={t} summary={summary} segments={segments} hitRateSeries={hitRateSeries} costSeries={costSeries} costAllZero={costAllZero} />
+            <ModelsTab t={t} summary={summary} segments={segments} />
           ) : null}
           {activeTab === 'quota' ? (
             <QuotaTab t={t} provider={provider} summary={summary} balance={balance} balanceRefreshing={props.balanceRefreshing} onRefreshBalance={props.onRefreshBalance} />

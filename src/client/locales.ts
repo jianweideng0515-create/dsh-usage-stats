@@ -94,12 +94,9 @@ export interface UsageStatsCopy {
   'trend.cost': string
   'trend.hitRate': string
   'chart.donut': string
-  'chart.hitRate': string
-  'chart.cost': string
   'chart.other': string
   'chart.noData': string
   'chart.insufficientData': string
-  'chart.noCost': string
   'loading': string
   'error': string
   'tokens.input': string
@@ -222,12 +219,9 @@ export const zh: UsageStatsCopy = {
   'trend.cost': '费用',
   'trend.hitRate': '缓存命中率',
   'chart.donut': '模型占比',
-  'chart.hitRate': '命中率趋势',
-  'chart.cost': '费用趋势',
   'chart.other': '其他',
   'chart.noData': '暂无数据',
   'chart.insufficientData': '数据点不足，暂不展示趋势',
-  'chart.noCost': '暂无费用数据（模型未计价）',
   'loading': '加载中…',
   'error': '加载失败',
   'tokens.input': '输入',
@@ -347,12 +341,9 @@ export const en: UsageStatsCopy = {
   'trend.cost': 'Cost',
   'trend.hitRate': 'Cache hit rate',
   'chart.donut': 'Model share',
-  'chart.hitRate': 'Hit rate trend',
-  'chart.cost': 'Cost trend',
   'chart.other': 'Others',
   'chart.noData': 'No data yet',
   'chart.insufficientData': 'Not enough data points for a trend',
-  'chart.noCost': 'No cost data (models unpriced)',
   'loading': 'Loading…',
   'error': 'Load failed',
   'tokens.input': 'Input',
