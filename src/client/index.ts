@@ -47,8 +47,6 @@ export function apply(ctx: ClientContext): void {
     inject: () => controller.inject(),
   }, UsageStatsSlotCard))
 
-  // 会话页：头部「用量」按钮 + 展开面板（session scope 自动注入当前会话 ID）。
-  const sessionController = new SessionUsageController()
   // 会话页：右上角「用量」按钮 + 展开面板（session scope 自动注入当前会话 ID）。
   // 挂在 header.utilities（标题相邻操作组之外的右对齐工具区）而非 actions。
   const sessionController = new SessionUsageController()
