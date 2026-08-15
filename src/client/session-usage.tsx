@@ -351,9 +351,7 @@ export function SessionUsageButton(props: {
                     <span className={styles.recentLabel}>{t('session.recentModel')}</span>
                     <span className={styles.recentValue} title={session.lastModel ?? undefined}>{session.lastModel ?? '-'}</span>
                     <span className={styles.recentLabel}>{t('session.recentHit')}</span>
-                    <span className={styles.recentValue}>
-                      <span className={styles.hitBadge}>{recentHit === null ? '-' : `${recentHit.toFixed(2)}%`}</span>
-                    </span>
+                    <span className={styles.recentValueEmerald}>{recentHit === null ? '-' : `${recentHit.toFixed(2)}%`}</span>
                     <span className={styles.recentLabel}>{t('session.recentTokens')}</span>
                     <span className={styles.recentValue}>{turnTokensCompact === null ? '-' : `${turnTokensCompact.value}${turnTokensCompact.unit} Tokens`}</span>
                     <span className={styles.recentLabel}>{t('session.recentCost')}</span>

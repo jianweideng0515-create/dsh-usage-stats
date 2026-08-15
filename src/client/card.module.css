@@ -825,8 +825,9 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 费用：克制的中性主色，与 Tokens 同色系（彩色只保留给命中率） */
 .valHighlightCost {
-  color: var(--dsw-alias-state-success-primary);
+  color: var(--dsw-alias-label-primary);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -1065,23 +1066,23 @@
   white-space: nowrap;
 }
 
+/* 缓存命中率：与 Hero 卡「平均命中」同色（success），无背景、无边框 */
+.recentValueEmerald {
+  color: var(--dsw-alias-state-success-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .unpricedHint {
   margin: 0.375rem 0 0;
   font-size: 0.6875rem;
   line-height: 1.4;
   color: var(--dsw-alias-state-warn-primary);
-}
-
-.hitBadge {
-  background-color: color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent);
-  color: var(--dsw-alias-state-success-primary);
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-state-success-primary) 30%, transparent);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  padding: 0.125rem 0.5rem;
-  border-radius: 9999px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .strongText {
