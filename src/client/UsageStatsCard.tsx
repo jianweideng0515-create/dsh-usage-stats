@@ -369,7 +369,8 @@ function TrendAreaChart(props: {
             ))}
             {series.map((p, i) => {
               const segs = bucketSegments(p, t)
-              let base = height
+              // 堆叠基准 = 内区底部（与 0 刻度线/网格一致），避免底部 padY 留白造成柱顶错位
+              let base = height - padY
               return (
                 <g key={p.bucket} onMouseEnter={() => setHover(i)}>
                   {/* 整列透明命中区：整列可悬停 */}
