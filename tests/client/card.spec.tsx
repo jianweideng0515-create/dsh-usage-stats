@@ -87,12 +87,41 @@ describe('UsageStatsCard', () => {
     // 切到余额 Tab → 默认 opencode（无配额 → 不可用提示）
     fireEvent.click(screen.getByText('tab.quota'))
     expect(screen.getByText(/balance\.unavailable/)).toBeTruthy()
-    // 切到 DeepSeek → 金额余额
+    // 切到 DeepSeek → 金额余额 + 预计可用天数（cost 0.35 / activeDays 2 = 0.175/天 → 12.34/0.175 = 70 天）
     fireEvent.click(screen.getByText('provider.deepseek'))
-    expect(screen.getByText(/12\.34 CNY/)).toBeTruthy()
+    expect(screen.getByText(/12\.34/)).toBeTruthy()
+    expect(screen.getByText(/balance\.estimate/)).toBeTruthy()
     // 切到 Ollama → 未接入提示
     fireEvent.click(screen.getByText('provider.ollama'))
     expect(screen.getByText('provider.notConnected')).toBeTruthy()
+  })
+
+  it('OpenCode 配额展示三窗口进度条卡', () => {
+    const t = (key: string) => key
+    const quota = {
+      rolling: { percent: 1, resetsAt: null },
+      weekly: { percent: 42, resetsAt: null },
+      monthly: { percent: 21, resetsAt: null },
+    }
+    render(<UsageStatsCard
+      t={t}
+      summary={summary}
+      balance={{ balance: null, currency: '', updatedAt: null, error: null, source: { baseUrl: 'x', path: '/usage', apiKeyEnv: 'K', source: 'auto:opencode-go' }, quota, costCurrency: 'CNY' }}
+      loading={false}
+      error={null}
+      {...baseProps}
+    />)
+    fireEvent.click(screen.getByText('tab.quota'))
+    // 三个窗口标签都在
+    expect(screen.getByText('quota.rolling')).toBeTruthy()
+    expect(screen.getByText('quota.weekly')).toBeTruthy()
+    expect(screen.getByText('quota.monthly')).toBeTruthy()
+    // 状态 chip：1% → 充沛；42% → 正常；21% → 充沛
+    expect(screen.getAllByText('quota.abundant').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('quota.normal')).toBeTruthy()
+    // 大数字百分号
+    expect(screen.getAllByText('1').length).toBeGreaterThan(0)
+    expect(screen.getByText('42')).toBeTruthy()
   })
 
   it('余额不可用时显示原因', () => {

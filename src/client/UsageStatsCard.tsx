@@ -304,15 +304,70 @@ function ModelsTab(props: {
   )
 }
 
+/** 配额窗口状态分级：百分比 → chip 文案键与进度条颜色。 */
+function quotaLevel(percent: number): { labelKey: string; colorVar: string } {
+  if (percent >= 85) return { labelKey: 'quota.high', colorVar: 'var(--dsw-alias-state-error-primary)' }
+  if (percent >= 60) return { labelKey: 'quota.elevated', colorVar: 'var(--dsw-alias-state-warn-primary)' }
+  if (percent >= 30) return { labelKey: 'quota.normal', colorVar: 'var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary))' }
+  return { labelKey: 'quota.abundant', colorVar: 'var(--dsw-alias-state-success-primary)' }
+}
+
+/** 单个配额窗口进度条卡（滚动/每周/每月）。 */
+function QuotaWindowCard(props: {
+  t: (key: string) => string
+  label: string
+  window: { percent: number; resetsAt: string | null } | null
+  highlight: boolean
+}): ReactElement {
+  const { t, label, window, highlight } = props
+  if (window === null) {
+    return (
+      <div className={`${styles.quotaCard} ${highlight ? styles.quotaCardActive : ''}`}>
+        <div className={styles.quotaCardTop}>
+          <span className={styles.quotaCardLabel}>{label}</span>
+          <span className={`${styles.chip} ${styles.chipNeutral}`}>-</span>
+        </div>
+        <div className={styles.quotaCardValue}>-</div>
+        <div className={styles.progressBarBg}><div className={styles.progressBarFill} style={{ width: '0%', background: 'var(--dsw-alias-label-tertiary)' }} /></div>
+        <div className={styles.quotaCardReset}>
+          <span>{t('quota.resetLabel')}</span>
+          <strong>-</strong>
+        </div>
+      </div>
+    )
+  }
+  const level = quotaLevel(window.percent)
+  return (
+    <div className={`${styles.quotaCard} ${highlight ? styles.quotaCardActive : ''}`}>
+      <div className={styles.quotaCardTop}>
+        <span className={styles.quotaCardLabel}>{label}</span>
+        <span className={`${styles.chip} ${styles.chipNeutral}`}>{t(level.labelKey)}</span>
+      </div>
+      <div className={styles.quotaCardValue}>
+        {window.percent}<span className={styles.quotaCardUnit}>%</span>
+        <span className={styles.quotaCardUsed}>{t('quota.used')} {window.percent}%</span>
+      </div>
+      <div className={styles.progressBarBg}>
+        <div className={styles.progressBarFill} style={{ width: `${Math.min(100, window.percent)}%`, background: level.colorVar }} />
+      </div>
+      <div className={styles.quotaCardReset}>
+        <span>{t('quota.resetLabel')}</span>
+        <strong>{formatResetCountdown(window.resetsAt, t)}</strong>
+      </div>
+    </div>
+  )
+}
+
 /** 余额与配额 Tab：按提供商展示余额/配额（参考原型 Tab 3）。 */
 function QuotaTab(props: {
   t: (key: string) => string
   provider: ProviderId
+  summary: SummaryResponse
   balance: BalanceResponse | null
   balanceRefreshing: boolean
   onRefreshBalance: () => void
 }): ReactElement {
-  const { t, provider, balance, balanceRefreshing, onRefreshBalance } = props
+  const { t, provider, summary, balance, balanceRefreshing, onRefreshBalance } = props
   const quota = balance?.quota ?? null
   if (balance === null) return <p className={styles.status}>{t('loading')}</p>
   if (provider === 'opencode') {
@@ -323,37 +378,38 @@ function QuotaTab(props: {
       { key: 'monthly', label: t('quota.monthly'), window: quota.monthly },
     ] as const
     return (
-      <>
-        <div className={styles.quotaRows}>
-          {rows.map((row) => (
-            <div key={row.key} className={styles.quotaRow}>
-              <span className={styles.quotaLabel}>{row.label}</span>
-              <span className={styles.quotaPercent}>{row.window === null ? '-' : `${row.window.percent}%`}</span>
-              <span className={styles.quotaReset}>{row.window === null ? '' : formatResetCountdown(row.window.resetsAt, t)}</span>
-            </div>
-          ))}
-        </div>
-        {balance.updatedAt !== null ? <p className={styles.status}>{t('balance.updated')}: {new Date(balance.updatedAt).toLocaleString()}</p> : null}
-        {balance.source !== null ? <p className={styles.status}>{t('balance.source')}: {balance.source.source}</p> : null}
-        <button type="button" className={styles.refresh} disabled={balanceRefreshing} onClick={onRefreshBalance}>
-          {balanceRefreshing ? t('balance.refreshing') : t('balance.refresh')}
-        </button>
-      </>
+      <div className={styles.quotaGrid}>
+        {rows.map((row) => (
+          <QuotaWindowCard key={row.key} t={t} label={row.label} window={row.window} highlight={row.key === 'weekly'} />
+        ))}
+      </div>
     )
   }
   if (provider === 'deepseek') {
     if (balance.balance === null) {
       return <p className={styles.status}>{t('balance.unavailable')}{balance.error !== null ? `: ${balance.error}` : ''}</p>
     }
+    // 预计可用天数：按选定范围内日均消耗估算（cost / 活跃天数）。
+    const dailyCost = summary.activeDays > 0 ? summary.cost / summary.activeDays : 0
+    const estDays = dailyCost > 0 ? Math.floor(balance.balance / dailyCost) : null
     return (
-      <>
-        <p className={styles.status}>{t('balance.amount')}: <strong>{balance.balance} {balance.currency}</strong></p>
+      <div className={styles.deepseekCard}>
+        <div className={styles.deepseekRow}>
+          <span className={styles.deepseekLabel}>{t('provider.deepseek')} · {t('balance.amount')}</span>
+          <span className={`${styles.chip} ${styles.chipBlue}`}>{t('provider.prepay')}</span>
+        </div>
+        <div className={styles.deepseekAmount}>{balance.balance} <span className={styles.deepseekCurrency}>{balance.currency}</span></div>
+        {estDays !== null ? (
+          <div className={styles.deepseekEstimate}>
+            {t('balance.estimate')} {estDays} {t('balance.days')}
+          </div>
+        ) : null}
         {balance.updatedAt !== null ? <p className={styles.status}>{t('balance.updated')}: {new Date(balance.updatedAt).toLocaleString()}</p> : null}
         {balance.source !== null ? <p className={styles.status}>{t('balance.source')}: {balance.source.source}</p> : null}
         <button type="button" className={styles.refresh} disabled={balanceRefreshing} onClick={onRefreshBalance}>
           {balanceRefreshing ? t('balance.refreshing') : t('balance.refresh')}
         </button>
-      </>
+      </div>
     )
   }
   return <p className={styles.status}>{t('provider.notConnected')}</p>
@@ -474,7 +530,7 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
             <ModelsTab t={t} summary={summary} segments={segments} donutStyle={donutStyle} hitRateSeries={hitRateSeries} costSeries={costSeries} costAllZero={costAllZero} />
           ) : null}
           {activeTab === 'quota' ? (
-            <QuotaTab t={t} provider={provider} balance={balance} balanceRefreshing={props.balanceRefreshing} onRefreshBalance={props.onRefreshBalance} />
+            <QuotaTab t={t} provider={provider} summary={summary} balance={balance} balanceRefreshing={props.balanceRefreshing} onRefreshBalance={props.onRefreshBalance} />
           ) : null}
         </>
       ) : null}

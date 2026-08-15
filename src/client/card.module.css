@@ -1411,6 +1411,162 @@
   text-overflow: ellipsis;
 }
 
+/* 配额窗口进度条卡（OpenCode：滚动/每周/每月） */
+.quotaGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.quotaCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 0.75rem;
+  background: var(--dsw-alias-bg-layer-2);
+  transition: border-color 0.16s;
+}
+
+.quotaCardActive {
+  border-color: color-mix(in srgb, var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary)) 45%, var(--dsw-alias-border-l2));
+  background: color-mix(in srgb, var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary)) 6%, var(--dsw-alias-bg-layer-2));
+}
+
+.quotaCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.quotaCardLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--dsw-alias-label-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chipNeutral {
+  background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 14%, transparent);
+  color: var(--dsw-alias-label-secondary);
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-tertiary) 30%, transparent);
+}
+
+.quotaCardValue {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: var(--dsw-alias-label-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.quotaCardUnit {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.quotaCardUsed {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: nowrap;
+}
+
+.progressBarBg {
+  width: 100%;
+  height: 0.5rem;
+  background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 16%, transparent);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.quotaCardReset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--dsw-alias-label-secondary);
+  min-width: 0;
+}
+
+.quotaCardReset strong {
+  color: var(--dsw-alias-label-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* DeepSeek 余额卡 */
+.deepseekCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary)) 40%, var(--dsw-alias-border-l2));
+  border-radius: 0.75rem;
+  background: linear-gradient(to right, color-mix(in srgb, var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary)) 10%, var(--dsw-alias-bg-layer-2)), var(--dsw-alias-bg-layer-2));
+  min-width: 0;
+}
+
+.deepseekRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.deepseekLabel {
+  font-size: 0.75rem;
+  color: var(--dsw-alias-label-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deepseekAmount {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary));
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.deepseekCurrency {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.deepseekEstimate {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dsw-alias-state-success-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kpiCard,
   .bar,

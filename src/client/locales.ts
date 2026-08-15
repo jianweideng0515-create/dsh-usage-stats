@@ -49,6 +49,15 @@ export interface UsageStatsCopy {
   'quota.minutes': string
   'quota.after': string
   'quota.resetSoon': string
+  'quota.abundant': string
+  'quota.normal': string
+  'quota.elevated': string
+  'quota.high': string
+  'quota.used': string
+  'quota.resetLabel': string
+  'balance.estimate': string
+  'balance.days': string
+  'balance.sufficient': string
   'range.last7': string
   'range.last14': string
   'range.last30': string
@@ -162,6 +171,15 @@ export const zh: UsageStatsCopy = {
   'quota.minutes': '分钟',
   'quota.after': '后重置',
   'quota.resetSoon': '即将重置',
+  'quota.abundant': '充沛',
+  'quota.normal': '正常',
+  'quota.elevated': '偏高',
+  'quota.high': '告警',
+  'quota.used': '已用',
+  'quota.resetLabel': '重置时间',
+  'balance.estimate': '预计可支撑约',
+  'balance.days': '天消耗',
+  'balance.sufficient': '余额充足',
   'range.last7': '最近 7 天',
   'range.last14': '最近 14 天',
   'range.last30': '最近 30 天',
@@ -272,6 +290,15 @@ export const en: UsageStatsCopy = {
   'quota.minutes': 'min',
   'quota.after': ' until reset',
   'quota.resetSoon': 'Resets soon',
+  'quota.abundant': 'Abundant',
+  'quota.normal': 'Normal',
+  'quota.elevated': 'Elevated',
+  'quota.high': 'High',
+  'quota.used': 'used',
+  'quota.resetLabel': 'Reset at',
+  'balance.estimate': 'Estimated to cover about',
+  'balance.days': 'days of usage',
+  'balance.sufficient': 'Sufficient balance',
   'range.last7': 'Last 7 days',
   'range.last14': 'Last 14 days',
   'range.last30': 'Last 30 days',
