@@ -698,18 +698,6 @@
   vertical-align: middle;
 }
 
-.unknownTag {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 10px;
-  color: var(--dsw-alias-label-tertiary);
-  background: var(--dsw-alias-bg-layer-3);
-  border: 1px solid var(--dsw-alias-border-l2);
-  vertical-align: middle;
-}
-
 .balance {
   display: flex;
   flex-direction: column;

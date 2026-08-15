@@ -479,8 +479,7 @@ function OverviewTab(props: {
               <tr key={m.model} className={styles.trHover}>
                 <td>
                   <span className={styles.modelDot} style={{ background: DONUT_SEGMENT_VARS[i % DONUT_SEGMENT_VARS.length] }} />
-                  {m.model === '__unknown__' ? <strong>{t('model.unknown')}</strong> : <strong>{m.model}</strong>}
-                  {m.model === '__unknown__' ? <span className={styles.unknownTag}>__unknown__</span> : null}
+                  <strong>{m.model === '__unknown__' ? t('model.unknown') : m.model}</strong>
                 </td>
                 <td className={styles.tdRight}>{m.requests}</td>
                 <td className={`${styles.tdRight} ${styles.tdStrong}`}>{formatTokens(m.tokens)}</td>
