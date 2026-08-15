@@ -13,19 +13,19 @@ DSH Web 的 API 用量统计插件：精确统计 token、请求、完成轮次�
   - **堆叠柱状趋势图**：按模型分段着色，Y 轴中文单位刻度（万/亿），悬停柱子显示当日明细 tooltip（总用量 / 费用 / 分模型 Top5+其他 / 缓存命中率）
   - 模型明细表（请求数 / token / 费用）
 
-  ###### <img src="docs/image-20260816035032614.png" alt="用量概览 Tab：KPI 卡、Token 拆分、堆叠柱状趋势图、模型明细" style="zoom:33%;" />
+  <img src="docs/image-20260816035032614.png" alt="用量概览 Tab：KPI 卡、Token 拆分、堆叠柱状趋势图、模型明细" width="600" />
   
 - **模型与缓存 Tab**：模型占比 Donut 图 + 缓存效率诊断（命中率、节省 token、节省比例）
 
-  ###### <img src="docs/image-20260816035059875.png" alt="模型与缓存 Tab：模型占比 Donut 与缓存效率诊断" style="zoom: 33%;" />
+  <img src="docs/image-20260816035059875.png" alt="模型与缓存 Tab：模型占比 Donut 与缓存效率诊断" width="600" />
 
 - **余额与配额 Tab**：OpenCode 订阅配额三窗口进度条（滚动 / 每周 / 每月 + 重置倒计时）；DeepSeek 官方余额（金额 / 预计可用天数 / 充值链接跳转官方充值页 / 手动刷新）
 
-  ###### <img src="docs/image-20260816035141846.png" alt="余额与配额 Tab：OpenCode 配额三窗口与 DeepSeek 余额" style="zoom: 33%;" />
+  <img src="docs/image-20260816035141846.png" alt="余额与配额 Tab：OpenCode 配额三窗口与 DeepSeek 余额" width="600" />
 
 - **会话用量面板**：会话页按钮展开当前会话用量（累计 / 最近请求 / 进行中轮次实时消耗）
 
-  <img src="docs/image-20260816035247662.png" alt="会话页用量面板：累计消耗与最近请求" />
+  <img src="docs/image-20260816035247662.png" alt="会话页用量面板：累计消耗与最近请求" width="800" />
 
 ## 架构
 
