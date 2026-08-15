@@ -122,6 +122,10 @@ export function apply(ctx: Context, config: Config = {}): void {
       }
       return result
     })
+    // 配置源变化（settings 挂载/热更新）后立即用新配置刷新一次快照：
+    // setSource 触发晚于 start() 的首次 refresh，若不补刷，快照会停留在
+    // 旧配置的检测结果上直到下一轮定时刷新。
+    void balance.refresh()
   }
   // 先同步检测配置再启动定时器：start() 会立即 refresh 一次，若检测闭包尚未
   // 设置，首次快照会停留在默认的 disabled 状态（要等下一轮定时刷新才纠正）。

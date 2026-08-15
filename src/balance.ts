@@ -66,6 +66,9 @@ export class BalanceClient {
     try {
       response = await this.deps.fetchFn(endpoint.baseUrl + endpoint.path, {
         headers: { authorization: `Bearer ${key}` },
+        // 余额接口挂起会卡住快照更新（无超时的话 fetch 可能长时间 pending），
+        // 10 秒超时后按网络错误处理，下一轮定时刷新再试。
+        signal: AbortSignal.timeout(10_000),
       })
     } catch (error) {
       this.last = FAIL(`network error: ${String(error)}`, endpoint)
