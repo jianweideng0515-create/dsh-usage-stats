@@ -4,19 +4,28 @@ DSH Web 的 API 用量统计插件：精确统计 token、请求、完成轮次�
 
 与启发式估算不同，本插件的 token 计数是**精确**的：直接来自每个请求的 provider `usage` 报告（`inputTokens`/`outputTokens` 与 `cacheReadTokens`/`cacheWriteTokens`），并采用 DSH 自身的 `(turn, step)` 替换语义，最终消息会替换其先前的用量块而不是重复累计。
 
-![用量统计面板](docs/usage-stats.png)
-
 ## 功能
 
 - **用量概览 Tab**
+  
   - 常驻 KPI 区：Token 总量（含费用）、请求数、完成轮次、活跃天数、平均缓存命中率、提供商动态卡（OpenCode 周配额 / DeepSeek 余额）
   - Token 四分色拆分条（输入 / 缓存读 / 缓存写 / 输出）
   - **堆叠柱状趋势图**：按模型分段着色，Y 轴中文单位刻度（万/亿），悬停柱子显示当日明细 tooltip（总用量 / 费用 / 分模型 Top5+其他 / 缓存命中率）
   - 模型明细表（请求数 / token / 费用）
+
+  <img src="docs/image-20260816035032614.png" alt="用量概览 Tab：KPI 卡、Token 拆分、堆叠柱状趋势图、模型明细" style="zoom:33%;" />
+  
 - **模型与缓存 Tab**：模型占比 Donut 图 + 缓存效率诊断（命中率、节省 token、节省比例）
+
+  <img src="docs/image-20260816035059875.png" alt="模型与缓存 Tab：模型占比 Donut 与缓存效率诊断" style="zoom: 33%;" />
+
 - **余额与配额 Tab**：OpenCode 订阅配额三窗口进度条（滚动 / 每周 / 每月 + 重置倒计时）；DeepSeek 官方余额（金额 / 预计可用天数 / 充值链接跳转官方充值页 / 手动刷新）
+
+  <img src="docs/image-20260816035141846.png" alt="余额与配额 Tab：OpenCode 配额三窗口与 DeepSeek 余额" style="zoom: 33%;" />
+
 - **会话用量面板**：会话页按钮展开当前会话用量（累计 / 最近请求 / 进行中轮次实时消耗）
-- 7 / 14 / 30 / 90 天与自定义范围切换；展开时 30s 轮询
+
+  <img src="docs/image-20260816035247662.png" alt="会话页用量面板：累计消耗与最近请求" />
 
 ## 架构
 
@@ -27,20 +36,25 @@ DSH Web 的 API 用量统计插件：精确统计 token、请求、完成轮次�
 
 独立插件，与 dsh-web-ui 家族及其聚合包无关。
 
-**方式一：npm（发布后）**
+**方式一：npm 安装**
 
 ```sh
 npm i @abcdefu_cja/dsh-usage-stats
 dsh plugin --profile web add @abcdefu_cja/dsh-usage-stats
 ```
 
-**方式二：本地 link（开发）**
+**方式二：本地 link（开发 / 从 GitHub 克隆）**
 
 ```sh
+git clone https://github.com/jianweideng0515-create/dsh-usage-stats
 dsh plugin --profile web add link:/path/to/dsh-usage-stats
 ```
 
-安装后重启 `dsh web`。也可写入个人 DSH 覆盖层 `~/.dsh/config.yaml`（保存即热加载）：
+安装后重启 `dsh web`，在设置页左侧导航可见「用量统计」入口：
+
+<img src="docs/image-20260816034838256.png" alt="设置页左侧导航中的用量统计入口" style="width: 280px;" />
+
+也可写入个人 DSH 覆盖层 `~/.dsh/config.yaml`（保存即热加载）：
 
 ```yaml
 - insert:
