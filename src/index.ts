@@ -99,6 +99,10 @@ export function apply(ctx: Context, config: Config = {}): void {
   let settingsService: { get(ns: unknown): unknown } | undefined
   ctx.inject(['settings'], (injectedCtx) => {
     settingsService = injectedCtx.settings as { get(ns: unknown): unknown }
+    // settings 服务就绪后立即补一次余额刷新：start() 的首次 refresh 可能在
+    // 本回调之前执行（inject 异步触发），当时 settingsService 尚未捕获，
+    // 自动推断会因读不到命名空间而失败——这里补齐首次正确快照。
+    void balance.refresh()
   })
   const balance = new BalanceClient({
     fetchFn: fetch,
