@@ -151,7 +151,7 @@ export function UsageStatsCard(props: UsageStatsCardProps): ReactElement {
   const costAllZero = summary !== null && summary.cost === 0 && summary.uncountedRequests > 0
 
   return (
-    <div className={styles.card}>
+    <div className={styles.content}>
       <div className={styles.rangeRow}>
         {RANGES.map((r) => (
           <button
@@ -328,6 +328,8 @@ export interface UsageStatsCardStore {
   customFrom: string
   customTo: string
   balanceRefreshing: boolean
+  /** 卡片是否展开；收起时不渲染内容且暂停轮询。 */
+  expanded: boolean
 }
 
 /** controller 暴露的动作。 */
@@ -339,6 +341,15 @@ export interface UsageStatsCardActions {
 }
 
 /** 插槽注册侧注入面：hooks 快照 + 动作。 */
+export interface UsageStatsCardActions {
+  onRangeDays: (days: number | 'custom') => void
+  onCustomFrom: (value: string) => void
+  onCustomTo: (value: string) => void
+  onRefreshBalance: () => void
+  /** 展开/收起卡片（收起时暂停轮询）。 */
+  onToggleExpanded: () => void
+}
+
 export interface UsageStatsCardFace extends UsageStatsCardActions {
   hooks: {
     usageStatsCard: SnapshotStore<UsageStatsCardStore>
@@ -353,7 +364,7 @@ function fmtDate(d: Date): string {
   return `${d.getFullYear()}-${mm}-${dd}`
 }
 
-/** 统计卡片 controller：持有范围与数据状态，30s 轮询 summary/balance。 */
+/** 统计卡片 controller：持有范围与数据状态，展开时 30s 轮询 summary/balance。 */
 export class UsageStatsCardController {
   private readonly store: SnapshotStore<UsageStatsCardStore>
   private rangeDays: number | 'custom' = 7
@@ -364,17 +375,13 @@ export class UsageStatsCardController {
   private loading = false
   private error: string | null = null
   private balanceRefreshing = false
+  private expanded = false
   private abort: AbortController | null = null
-  private readonly timer: ReturnType<typeof setInterval>
+  private timer: ReturnType<typeof setInterval> | null = null
 
   constructor() {
     this.store = createSnapshotStore(this.projection())
-    void this.pollSummary()
-    void this.pollBalance()
-    this.timer = setInterval(() => {
-      void this.pollSummary()
-      void this.pollBalance()
-    }, REFRESH_INTERVAL_MS)
+    // 默认收起：不发起请求，展开后才开始轮询。
   }
 
   /** 计算当前范围起点；自定义且未填时返回 null。 */
@@ -401,11 +408,38 @@ export class UsageStatsCardController {
       customFrom: this.customFrom,
       customTo: this.customTo,
       balanceRefreshing: this.balanceRefreshing,
+      expanded: this.expanded,
     }
   }
 
   private publish(): void {
     this.store.set(this.projection())
+  }
+
+  private startPolling(): void {
+    if (this.timer !== null) return
+    void this.pollSummary()
+    void this.pollBalance()
+    this.timer = setInterval(() => {
+      void this.pollSummary()
+      void this.pollBalance()
+    }, REFRESH_INTERVAL_MS)
+  }
+
+  private stopPolling(): void {
+    if (this.timer !== null) {
+      clearInterval(this.timer)
+      this.timer = null
+    }
+    this.abort?.abort()
+  }
+
+  /** 切换展开状态：展开即拉取并定时刷新，收起即停止轮询并中止在途请求。 */
+  toggleExpanded(): void {
+    this.expanded = !this.expanded
+    if (this.expanded) this.startPolling()
+    else this.stopPolling()
+    this.publish()
   }
 
   private async pollSummary(): Promise<void> {
@@ -476,6 +510,7 @@ export class UsageStatsCardController {
           this.publish()
         })()
       },
+      onToggleExpanded: () => this.toggleExpanded(),
     }
   }
 }
@@ -493,27 +528,70 @@ type UsageStatsSlotProps =
 type CardTranslate = (key: string) => string
 
 /**
+ * 可折叠外壳：标题头 + chevron，点击展开/收起统计内容。
+ * 收起时内容不渲染（DOM 干净），controller 同步暂停轮询。
+ */
+export function StatsCardShell(props: {
+  t: CardTranslate
+  title: string
+  description: string
+  expanded: boolean
+  onToggle: () => void
+  children: ReactElement | null
+}): ReactElement {
+  return (
+    <div className={styles.card}>
+      <button
+        type="button"
+        className={styles.header}
+        aria-expanded={props.expanded}
+        aria-label={props.t(props.expanded ? 'settings.collapse' : 'settings.expand')}
+        title={props.description}
+        onClick={props.onToggle}
+      >
+        <span className={styles.headText}>
+          <span className={styles.name}>{props.title}</span>
+          <span className={styles.description}>{props.description}</span>
+        </span>
+        <span className={props.expanded ? styles.chevronOpen : styles.chevron}>▾</span>
+      </button>
+      {props.expanded ? <div className={styles.body}>{props.children}</div> : null}
+    </div>
+  )
+}
+
+/**
  * Adapter that bridges the controller's injected snapshot and actions onto
- * the controlled UsageStatsCard against the slot-composed prop contract.
+ * the collapsible shell and the controlled UsageStatsCard.
  */
 export function UsageStatsSlotCard(props: UsageStatsSlotProps): ReactElement {
   const state = props.useUsageStatsCard((s) => s)
   const t = props.t as CardTranslate
   return (
-    <UsageStatsCard
+    <StatsCardShell
       t={t}
-      summary={state.summary}
-      balance={state.balance}
-      loading={state.loading}
-      error={state.error}
-      rangeDays={state.rangeDays}
-      customFrom={state.customFrom}
-      customTo={state.customTo}
-      onRangeDays={props.onRangeDays}
-      onCustomFrom={props.onCustomFrom}
-      onCustomTo={props.onCustomTo}
-      onRefreshBalance={props.onRefreshBalance}
-      balanceRefreshing={state.balanceRefreshing}
-    />
+      title={t('settings.title')}
+      description={t('settings.description')}
+      expanded={state.expanded}
+      onToggle={props.onToggleExpanded}
+    >
+      {state.expanded ? (
+        <UsageStatsCard
+          t={t}
+          summary={state.summary}
+          balance={state.balance}
+          loading={state.loading}
+          error={state.error}
+          rangeDays={state.rangeDays}
+          customFrom={state.customFrom}
+          customTo={state.customTo}
+          onRangeDays={props.onRangeDays}
+          onCustomFrom={props.onCustomFrom}
+          onCustomTo={props.onCustomTo}
+          onRefreshBalance={props.onRefreshBalance}
+          balanceRefreshing={state.balanceRefreshing}
+        />
+      ) : null}
+    </StatsCardShell>
   )
 }

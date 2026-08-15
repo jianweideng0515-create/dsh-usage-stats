@@ -8,6 +8,14 @@
   transition: border-color 0.16s, background 0.16s;
 }
 
+/* 折叠外壳的内容区（无边框；外壳 .body 负责内边距） */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
 .cardOpen {
   background: var(--dsw-alias-bg-layer-2);
   border-color: var(--dsw-alias-label-dimmed);

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 // The npm SDK's client half is a closure-factory bundle (window.__ModuleLoader__),
 // not importable under vitest; stub the one the card's controller uses.
@@ -11,7 +11,7 @@ vi.mock('@deepseek-ai/dsh-client-runtime/client', () => ({
   SnapshotStore: {},
 }))
 import type { SummaryResponse } from '../../src/client/api.ts'
-import { UsageStatsCard } from '../../src/client/UsageStatsCard.tsx'
+import { StatsCardShell, UsageStatsCard } from '../../src/client/UsageStatsCard.tsx'
 
 const summary: SummaryResponse = {
   from: '2026-08-14', to: '2026-08-15',
@@ -34,6 +34,9 @@ const baseProps = {
   onRefreshBalance: () => {},
   balanceRefreshing: false,
 }
+
+/** 文件级清理：每个用例后卸载 DOM（vitest 未开 globals，无自动 cleanup）。 */
+afterEach(() => cleanup())
 
 describe('UsageStatsCard', () => {
   afterEach(() => vi.restoreAllMocks())
@@ -80,5 +83,32 @@ describe('UsageStatsCard', () => {
       {...baseProps}
     />)
     expect(screen.getByText(/provider does not expose an endpoint/)).toBeTruthy()
+  })
+})
+
+describe('StatsCardShell', () => {
+  const t = (key: string) => key
+
+  it('收起时只显示标题头，不渲染内容', () => {
+    render(<StatsCardShell t={t} title="API 用量统计" description="统计" expanded={false} onToggle={() => {}}>
+      <div>统计内容</div>
+    </StatsCardShell>)
+    expect(screen.getByText('API 用量统计')).toBeTruthy()
+    expect(screen.queryByText('统计内容')).toBeNull()
+    expect(screen.getByRole('button', { expanded: false })).toBeTruthy()
+  })
+
+  it('展开时渲染内容，点击头部触发切换', () => {
+    const onToggle = vi.fn()
+    const { rerender } = render(<StatsCardShell t={t} title="API 用量统计" description="统计" expanded={false} onToggle={onToggle}>
+      <div>统计内容</div>
+    </StatsCardShell>)
+    fireEvent.click(screen.getByRole('button'))
+    expect(onToggle).toHaveBeenCalledTimes(1)
+    rerender(<StatsCardShell t={t} title="API 用量统计" description="统计" expanded onToggle={onToggle}>
+      <div>统计内容</div>
+    </StatsCardShell>)
+    expect(screen.getByText('统计内容')).toBeTruthy()
+    expect(screen.getByRole('button', { expanded: true })).toBeTruthy()
   })
 })
