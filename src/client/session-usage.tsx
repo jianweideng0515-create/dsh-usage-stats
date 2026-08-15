@@ -193,13 +193,13 @@ export function SessionUsageButton(props: {
                   <div><dt>{t('metric.sessionTurns')}</dt><dd>{session.turns}</dd></div>
                   <div><dt>{t('metric.sessionCost')}</dt><dd>{formatCost(session.cost)}</dd></div>
                   <div><dt>{t('metric.avgHitRate')}</dt><dd>{formatRate(sessionHitRate(session))}</dd></div>
-                  <div><dt>{t('metric.tokens')}</dt><dd>{formatTokens(tokensTotal)}</dd></div>
+                  <div><dt>{t('metric.tokens')}</dt><dd className={styles.highlight}>{formatTokens(tokensTotal)}</dd></div>
                 </dl>
               </div>
               <div className={styles.sessionUsageGroup}>
                 <span className={styles.sessionUsageGroupTitle}>{t('session.group.account')}</span>
                 <dl className={styles.sessionUsageMetrics}>
-                  <div><dt>{t('balance.title')}</dt><dd>{state.balance === null ? '-' : state.balance.balance === null
+                  <div><dt>{t('balance.title')}</dt><dd className={state.balance !== null && state.balance.balance !== null ? styles.highlight : undefined}>{state.balance === null ? '-' : state.balance.balance === null
                     ? (state.balance.error ?? t('balance.unavailable'))
                     : `${state.balance.balance} ${state.balance.currency}`}</dd></div>
                 </dl>

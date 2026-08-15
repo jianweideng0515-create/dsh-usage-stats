@@ -771,16 +771,17 @@
   right: 0;
   /* 高于会话头部其他浮层（模型选择等）；宽度防溢出视口 */
   z-index: 100;
-  width: 264px;
+  width: 272px;
   max-width: calc(100vw - 32px);
-  padding: 10px 12px 8px;
+  padding: 12px 14px 12px;
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-layer-2);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.28);
+  border-radius: 10px;
+  /* 浮层面板用更高一级背景，与头部条拉开层级 */
+  background: var(--dsw-alias-bg-layer-3);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.32);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   /* 指向按钮的小箭头 */
   animation: usagePanelIn 150ms ease-out;
 }
@@ -789,12 +790,12 @@
   content: '';
   position: absolute;
   top: -6px;
-  right: 18px;
+  right: 20px;
   width: 10px;
   height: 10px;
   border-left: 1px solid var(--dsw-alias-border-l2);
   border-top: 1px solid var(--dsw-alias-border-l2);
-  background: var(--dsw-alias-bg-layer-2);
+  background: var(--dsw-alias-bg-layer-3);
   transform: rotate(45deg);
 }
 
@@ -812,27 +813,27 @@
 .sessionUsageGroup {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
 }
 
 /* 分组分隔：首组无上边线，后续组用细线隔开 */
 .sessionUsageGroup + .sessionUsageGroup {
   border-top: 1px solid var(--dsw-alias-border-l2);
-  padding-top: 8px;
+  padding-top: 10px;
 }
 
 .sessionUsageGroupTitle {
   font-size: 11px;
   font-weight: 600;
-  color: var(--dsw-alias-label-tertiary);
-  letter-spacing: 0.02em;
+  color: var(--dsw-alias-label-secondary);
+  letter-spacing: 0.04em;
 }
 
 .sessionUsageMetrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 14px;
+  gap: 6px 16px;
   margin: 0;
   min-width: 0;
 }
@@ -858,6 +859,19 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 关键数值（Tokens 总量、账户余额）强调：加大并提升明度 */
+.sessionUsageMetrics dd.highlight {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dsw-alias-label-primary);
+}
+
+.sessionUsageMetrics dd.highlightOk {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dsw-alias-state-success-primary);
 }
 
 @media (prefers-reduced-motion: reduce) {
