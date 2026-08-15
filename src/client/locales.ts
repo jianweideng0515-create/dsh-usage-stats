@@ -56,9 +56,15 @@ export interface UsageStatsCopy {
   'quota.used': string
   'quota.resetLabel': string
   'quota.notice': string
+  'quota.remaining': string
   'balance.estimate': string
   'balance.days': string
   'balance.sufficient': string
+  'balance.recharge': string
+  'provider.openaiLimit': string
+  'provider.openaiSub': string
+  'provider.ollamaTitle': string
+  'provider.ollamaDesc': string
   'chart.savedRatio': string
   'range.last7': string
   'range.last14': string
@@ -180,9 +186,15 @@ export const zh: UsageStatsCopy = {
   'quota.used': '已用',
   'quota.resetLabel': '重置时间',
   'quota.notice': '在 opencode 配置中选择「OpenCode Go」作为提供商即可自动激活限额机制。',
+  'quota.remaining': '额度剩余',
   'balance.estimate': '预计可支撑约',
   'balance.days': '天消耗',
   'balance.sufficient': '余额充足',
+  'balance.recharge': '充值余额',
+  'provider.openaiLimit': 'OpenAI 月度额度上限',
+  'provider.openaiSub': '未接入 OpenAI 用量数据',
+  'provider.ollamaTitle': 'Ollama 私有化 / 本地模型',
+  'provider.ollamaDesc': '本地推理无需消耗云端 Token 费用，无额度限制与账单余额要求。',
   'chart.savedRatio': '节省比例',
   'range.last7': '最近 7 天',
   'range.last14': '最近 14 天',
@@ -301,9 +313,15 @@ export const en: UsageStatsCopy = {
   'quota.used': 'used',
   'quota.resetLabel': 'Reset at',
   'quota.notice': 'Choose "OpenCode Go" as the provider in opencode config to activate the quota mechanism.',
+  'quota.remaining': 'remaining',
   'balance.estimate': 'Estimated to cover about',
   'balance.days': 'days of usage',
   'balance.sufficient': 'Sufficient balance',
+  'balance.recharge': 'Recharge',
+  'provider.openaiLimit': 'OpenAI monthly credit limit',
+  'provider.openaiSub': 'No OpenAI usage data connected',
+  'provider.ollamaTitle': 'Ollama private / local models',
+  'provider.ollamaDesc': 'Local inference costs no cloud tokens; no quota limits or billing balance required.',
   'chart.savedRatio': 'Saved ratio',
   'range.last7': 'Last 7 days',
   'range.last14': 'Last 14 days',

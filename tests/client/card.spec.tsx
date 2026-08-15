@@ -91,9 +91,9 @@ describe('UsageStatsCard', () => {
     fireEvent.click(screen.getByText('provider.deepseek'))
     expect(screen.getByText(/12\.34/)).toBeTruthy()
     expect(screen.getByText(/balance\.estimate/)).toBeTruthy()
-    // 切到 Ollama → 未接入提示
+    // 切到 Ollama → 本地模型占位卡
     fireEvent.click(screen.getByText('provider.ollama'))
-    expect(screen.getByText('provider.notConnected')).toBeTruthy()
+    expect(screen.getByText('provider.ollamaTitle')).toBeTruthy()
   })
 
   it('OpenCode 配额展示三窗口进度条卡', () => {

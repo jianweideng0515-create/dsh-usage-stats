@@ -863,6 +863,25 @@
   border: 1px solid color-mix(in srgb, var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary)) 30%, transparent);
 }
 
+/* chip 彩色分级（参考原型：充沛绿 / 正常蓝 / 偏高黄 / 告警红） */
+.chipEmerald {
+  background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent);
+  color: var(--dsw-alias-state-success-primary);
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-state-success-primary) 30%, transparent);
+}
+
+.chipAmber {
+  background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 14%, transparent);
+  color: var(--dsw-alias-state-warn-primary);
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-state-warn-primary) 30%, transparent);
+}
+
+.chipError {
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 14%, transparent);
+  color: var(--dsw-alias-state-error-primary);
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-state-error-primary) 30%, transparent);
+}
+
 /* Token 四分色拆分项（色点 + 文案） */
 .tokenItem {
   display: inline-flex;
@@ -1657,6 +1676,68 @@
   font-weight: 600;
   color: var(--dsw-alias-state-success-primary);
   font-variant-numeric: tabular-nums;
+}
+
+/* DeepSeek 卡操作行：充值（主按钮）+ 刷新 */
+.deepseekActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.btnPrimary {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--dsw-alias-button-info-fill);
+  background: var(--dsw-alias-button-info-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+  cursor: pointer;
+  transition: filter 0.13s;
+}
+
+.btnPrimary:hover {
+  filter: brightness(1.1);
+}
+
+/* OpenAI / Ollama 占位卡（参考原型对应视图） */
+.placeholderCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 0.75rem;
+  background: var(--dsw-alias-bg-layer-2);
+  min-width: 0;
+}
+
+.placeholderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.placeholderTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--dsw-alias-label-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.placeholderValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-tertiary);
+  line-height: 1.1;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -488,15 +488,15 @@ function ModelsTab(props: {
   )
 }
 
-/** 配额窗口状态分级：百分比 → chip 文案键与进度条颜色。 */
-function quotaLevel(percent: number): { labelKey: string; colorVar: string } {
-  if (percent >= 85) return { labelKey: 'quota.high', colorVar: 'var(--dsw-alias-state-error-primary)' }
-  if (percent >= 60) return { labelKey: 'quota.elevated', colorVar: 'var(--dsw-alias-state-warn-primary)' }
-  if (percent >= 30) return { labelKey: 'quota.normal', colorVar: 'var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary))' }
-  return { labelKey: 'quota.abundant', colorVar: 'var(--dsw-alias-state-success-primary)' }
+/** 配额窗口状态分级：百分比 → chip 文案键、chip 类与进度条颜色。 */
+function quotaLevel(percent: number): { labelKey: string; colorVar: string; chipClass: string } {
+  if (percent >= 85) return { labelKey: 'quota.high', colorVar: 'var(--dsw-alias-state-error-primary)', chipClass: 'chipError' }
+  if (percent >= 60) return { labelKey: 'quota.elevated', colorVar: 'var(--dsw-alias-state-warn-primary)', chipClass: 'chipAmber' }
+  if (percent >= 30) return { labelKey: 'quota.normal', colorVar: 'var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary))', chipClass: 'chipBlue' }
+  return { labelKey: 'quota.abundant', colorVar: 'var(--dsw-alias-state-success-primary)', chipClass: 'chipEmerald' }
 }
 
-/** 单个配额窗口进度条卡（滚动/每周/每月）。 */
+/** 单个配额窗口进度条卡（滚动/每周/每月，参考原型 quotaCard）。 */
 function QuotaWindowCard(props: {
   t: (key: string) => string
   label: string
@@ -525,11 +525,13 @@ function QuotaWindowCard(props: {
     <div className={`${styles.quotaCard} ${highlight ? styles.quotaCardActive : ''}`}>
       <div className={styles.quotaCardTop}>
         <span className={styles.quotaCardLabel}>{label}</span>
-        <span className={`${styles.chip} ${styles.chipNeutral}`}>{t(level.labelKey)}</span>
+        <span className={`${styles.chip} ${styles[level.chipClass]}`}>{t(level.labelKey)}</span>
       </div>
       <div className={styles.quotaCardValue}>
         {window.percent}<span className={styles.quotaCardUnit}>%</span>
-        <span className={styles.quotaCardUsed}>{t('quota.used')} {window.percent}%</span>
+        <span className={styles.quotaCardUsed} style={{ color: level.colorVar }}>
+          {highlight ? `${t('quota.remaining')} ${100 - window.percent}%` : `${t('quota.used')} ${window.percent}%`}
+        </span>
       </div>
       <div className={styles.progressBarBg}>
         <div className={styles.progressBarFill} style={{ width: `${Math.min(100, window.percent)}%`, background: level.colorVar }} />
@@ -590,18 +592,41 @@ function QuotaTab(props: {
         <div className={styles.deepseekAmount}>{balance.balance} <span className={styles.deepseekCurrency}>{balance.currency}</span></div>
         {estDays !== null ? (
           <div className={styles.deepseekEstimate}>
-            {t('balance.estimate')} {estDays} {t('balance.days')}
+            {t('balance.estimate')} {estDays} {t('balance.days')} · {t('balance.sufficient')}
           </div>
         ) : null}
+        <div className={styles.deepseekActions}>
+          <button type="button" className={styles.btnPrimary}>{t('balance.recharge')}</button>
+          <button type="button" className={styles.refresh} disabled={balanceRefreshing} onClick={onRefreshBalance}>
+            {balanceRefreshing ? t('balance.refreshing') : t('balance.refresh')}
+          </button>
+        </div>
         {balance.updatedAt !== null ? <p className={styles.status}>{t('balance.updated')}: {new Date(balance.updatedAt).toLocaleString()}</p> : null}
         {balance.source !== null ? <p className={styles.status}>{t('balance.source')}: {balance.source.source}</p> : null}
-        <button type="button" className={styles.refresh} disabled={balanceRefreshing} onClick={onRefreshBalance}>
-          {balanceRefreshing ? t('balance.refreshing') : t('balance.refresh')}
-        </button>
       </div>
     )
   }
-  return <p className={styles.status}>{t('provider.notConnected')}</p>
+  if (provider === 'openai') {
+    return (
+      <div className={styles.placeholderCard}>
+        <div className={styles.placeholderRow}>
+          <span className={styles.placeholderTitle}>{t('provider.openaiLimit')}</span>
+          <span className={`${styles.chip} ${styles.chipNeutral}`}>{t('provider.monthlyLimit')}</span>
+        </div>
+        <div className={styles.placeholderValue}>-</div>
+        <p className={styles.status}>{t('provider.openaiSub')}</p>
+      </div>
+    )
+  }
+  return (
+    <div className={styles.placeholderCard}>
+      <div className={styles.placeholderRow}>
+        <span className={styles.placeholderTitle}>{t('provider.ollamaTitle')}</span>
+        <span className={`${styles.chip} ${styles.chipEmerald}`}>{t('provider.localFree')}</span>
+      </div>
+      <p className={styles.status}>{t('provider.ollamaDesc')}</p>
+    </div>
+  )
 }
 
 /** 重置倒计时文案：'2 天 3 小时后重置' / '5 小时后重置' / '30 分钟后重置'。 */
