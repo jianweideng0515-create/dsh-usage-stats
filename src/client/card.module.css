@@ -27,6 +27,9 @@
   justify-content: space-between;
   gap: 8px;
   width: 100%;
+  /* 与官方 settings.plugin.item 卡的折叠头部精确对齐（官方 72.5px − 2px 边框）。
+     内容垂直居中；若未来内容更高则自然扩展。 */
+  min-height: 70.5px;
   padding: 12px 14px;
   border: 0;
   background: transparent;
