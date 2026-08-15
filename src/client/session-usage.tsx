@@ -183,24 +183,6 @@ function ChevronDownIcon(props: { open: boolean }): ReactElement {
   )
 }
 
-function CopyIcon(): ReactElement {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-    </svg>
-  )
-}
-
-function CheckIcon(): ReactElement {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  )
-}
-
-/** 脉冲状态点（绿色呼吸动画）。 */
 function PulseDot(): ReactElement {
   return (
     <span className={styles.pulseDotContainer}>
@@ -225,7 +207,6 @@ export function SessionUsageButton(props: {
 }): ReactElement {
   const { t, state, onToggle } = props
   const rootRef = useRef<HTMLDivElement | null>(null)
-  const [copied, setCopied] = useState(false)
 
   // 点击面板外部关闭 + Escape 关闭
   useEffect(() => {
@@ -279,22 +260,6 @@ export function SessionUsageButton(props: {
       return restHours > 0 ? `${days} ${t('quota.days')} ${restHours} ${t('quota.hours')}${t('quota.after')}` : `${days} ${t('quota.days')}${t('quota.after')}`
     }
     return `${hours} ${t('quota.hours')}${t('quota.after')}`
-  }
-
-  const handleCopySummary = (): void => {
-    const sessionText = session === null ? '' : `Tokens: ${tokensTotal} | Cost: ${session.cost.toFixed(4)}`
-    const summaryText = [
-      sessionText,
-      balance?.quota !== null && balance?.quota !== undefined
-        ? `Monthly quota: ${balance.quota.monthly?.percent ?? 0}%`
-        : `Balance: ${balance?.balance === null || balance === null ? '-' : `${balance.balance} ${balance.currency}`}`,
-      `Avg Cache Hit: ${avgHit.toFixed(2)}%`,
-    ].filter(Boolean).join(' | ')
-    if (navigator.clipboard?.writeText !== undefined) {
-      void navigator.clipboard.writeText(summaryText)
-    }
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1600)
   }
 
   const quota = balance?.quota ?? null
@@ -373,18 +338,16 @@ export function SessionUsageButton(props: {
                   {t('session.recentTitle')}
                 </div>
                 <div className={styles.recentCard}>
-                  <div className={styles.recentRowTop}>
+                  <div className={styles.recentGrid}>
                     <span className={styles.recentModel} title={session.lastModel ?? undefined}>{session.lastModel ?? '-'}</span>
                     <span className={styles.recentHitGroup}>
                       <span className={styles.recentHitLabel}>{t('session.recentHit')}</span>
                       <span className={styles.hitBadge}>{recentHit === null ? '-' : `${recentHit.toFixed(2)}%`}</span>
                     </span>
-                  </div>
-                  <div className={styles.recentRowBottom}>
-                    <span>
+                    <span className={styles.recentTokensLine}>
                       {t('session.recentTokens')}: <strong className={styles.strongText}>{turnTokensCompact === null ? '-' : `${turnTokensCompact.value}${turnTokensCompact.unit} Tokens`}</strong>
                     </span>
-                    <span>
+                    <span className={styles.recentCostLine}>
                       {t('session.recentCost')}: <strong className={styles.strongText}>{turnCost === null ? '-' : formatCost(turnCost)}</strong>
                     </span>
                   </div>
@@ -395,7 +358,7 @@ export function SessionUsageButton(props: {
               </div>
             </div>
           ) : null}
-          {/* Footer：配额/余额详情 + 复制摘要 */}
+          {/* Footer：配额（配额制）/ 账户余额（金额制） */}
           <div className={styles.panelFooter}>
             {quotaRows.length > 0 ? (
               <div className={styles.quotaRows}>
@@ -408,20 +371,15 @@ export function SessionUsageButton(props: {
                 ))}
               </div>
             ) : null}
-            <div className={styles.footerFlex}>
-              {/* 配额制 provider（opencode-go 等）：账户余额即三窗口配额，不再重复显示余额行 */}
-              {quota === null ? (
+            {quota === null ? (
+              <div className={styles.footerFlex}>
                 <span className={styles.balanceText}>
                   {t('session.balance')}: <strong className={styles.balanceVal}>{balance === null ? '-' : balance.balance === null
                     ? (balance.error ?? t('balance.unavailable'))
                     : `${balance.balance} ${balance.currency}`}</strong>
                 </span>
-              ) : null}
-              <button type="button" onClick={handleCopySummary} className={`${styles.btnCopy} ${copied ? styles.btnCopyCopied : ''}`}>
-                {copied ? <CheckIcon /> : <CopyIcon />}
-                <span>{copied ? t('session.copied') : t('session.copy')}</span>
-              </button>
-            </div>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

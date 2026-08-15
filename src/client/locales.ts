@@ -16,8 +16,6 @@ export interface UsageStatsCopy {
   'session.recentHit': string
   'session.recentTokens': string
   'session.recentCost': string
-  'session.copy': string
-  'session.copied': string
   'session.balance': string
   'session.unpricedHint': string
   'session.noRecord': string
@@ -109,8 +107,6 @@ export const zh: UsageStatsCopy = {
   'session.recentHit': '缓存命中率',
   'session.recentTokens': '本次消耗',
   'session.recentCost': '本次费用',
-  'session.copy': '复制摘要',
-  'session.copied': '已复制',
   'session.balance': '账户余额',
   'session.unpricedHint': '* 该模型未配置单价，费用按 0 计（可在插件设置中配置价格）',
   'session.noRecord': '该会话无用量记录（插件开始计量前的历史会话不回填）',
@@ -199,8 +195,6 @@ export const en: UsageStatsCopy = {
   'session.recentHit': 'Cache hit rate',
   'session.recentTokens': 'Cost this request',
   'session.recentCost': 'Fee this request',
-  'session.copy': 'Copy summary',
-  'session.copied': 'Copied',
   'session.balance': 'Account balance',
   'session.unpricedHint': '* Model has no configured price; cost counted as 0 (configure prices in plugin settings)',
   'session.noRecord': 'No usage record for this session (history before the plugin started metering is not backfilled)',

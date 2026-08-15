@@ -1037,11 +1037,12 @@
   gap: 0.375rem;
 }
 
-.recentRowTop {
-  display: flex;
+.recentGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  row-gap: 0.375rem;
+  column-gap: 0.75rem;
   font-size: 0.75rem;
 }
 
@@ -1057,8 +1058,10 @@
 .recentHitGroup {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.375rem;
   flex: none;
+  min-width: 0;
 }
 
 .recentHitLabel {
@@ -1085,15 +1088,18 @@
   font-variant-numeric: tabular-nums;
 }
 
-.recentRowBottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.6875rem;
+.recentTokensLine,
+.recentCostLine {
   color: var(--dsw-alias-label-secondary);
-  padding-top: 0.375rem;
-  border-top: 1px solid var(--dsw-alias-border-l2);
-  gap: 0.5rem;
+  font-size: 0.6875rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recentCostLine {
+  text-align: right;
 }
 
 .strongText {
@@ -1113,8 +1119,6 @@
 .footerFlex {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
 }
 
 .balanceText {
@@ -1143,9 +1147,9 @@
 
 .quotaRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) 3.25rem minmax(0, 1fr);
   align-items: baseline;
-  gap: 10px;
+  gap: 0.75rem;
   font-size: 0.6875rem;
 }
 
@@ -1153,48 +1157,25 @@
   color: var(--dsw-alias-label-secondary);
   font-weight: 500;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .quotaPercent {
   color: var(--dsw-alias-label-primary);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .quotaReset {
   color: var(--dsw-alias-label-tertiary);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-.btnCopy {
-  font: inherit;
-  font-size: 0.625rem;
-  color: var(--dsw-alias-label-secondary);
-  background-color: var(--dsw-alias-bg-layer-3);
-  border: 1px solid var(--dsw-alias-border-l2);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex: none;
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.08);
-}
-
-.btnCopy:hover {
-  color: var(--dsw-alias-label-primary);
-  border-color: var(--dsw-alias-label-dimmed);
-  background-color: var(--dsw-alias-interactive-bg-hover);
-}
-
-.btnCopyCopied {
-  background-color: color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent);
-  border-color: color-mix(in srgb, var(--dsw-alias-state-success-primary) 45%, transparent);
-  color: var(--dsw-alias-state-success-primary);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1203,8 +1184,7 @@
   .barValue,
   .sessionUsage,
   .sessionUsageActive,
-  .chevronIcon,
-  .btnCopy {
+  .chevronIcon {
     transition: none;
   }
   .sessionUsagePanel {
