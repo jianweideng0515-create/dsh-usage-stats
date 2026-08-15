@@ -114,10 +114,16 @@ export class BalanceClient {
     let response: Response
     try {
       response = await this.deps.fetchFn(endpoint.baseUrl + endpoint.path, {
-        headers: { authorization: `Bearer ${key}` },
+        headers: {
+          authorization: `Bearer ${key}`,
+          // opencode.ai 的 Cloudflare 对非浏览器 UA 有数秒的延迟惩罚（实测
+          // Node fetch 直连约 13.7s 才返回），浏览器 UA 可避免该惩罚。
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        },
         // 余额接口挂起会卡住快照更新（无超时的话 fetch 可能长时间 pending），
-        // 10 秒超时后按网络错误处理，下一轮定时刷新再试。
-        signal: AbortSignal.timeout(10_000),
+        // 25 秒超时：覆盖 Cloudflare 对非浏览器 UA 的延迟惩罚（约 14s），
+        // 超时后按网络错误处理，下一轮定时刷新再试。
+        signal: AbortSignal.timeout(25_000),
       })
     } catch (error) {
       this.last = FAIL(`network error: ${String(error)}`, endpoint, this.costCurrency())
