@@ -172,6 +172,23 @@ describe('UsageStatsCard', () => {
     expect(screen.getByText('-0.07')).toBeTruthy()
   })
 
+  it('充值按钮显式 window.open 打开 DeepSeek 充值页', () => {
+    const t = (key: string) => key
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    render(<UsageStatsCard
+      t={t}
+      summary={summary}
+      balances={balances}
+      loading={false}
+      error={null}
+      {...baseProps}
+    />)
+    fireEvent.click(screen.getByText('provider.deepseek'))
+    fireEvent.click(screen.getByText('tab.quota'))
+    fireEvent.click(screen.getByText('balance.recharge'))
+    expect(open).toHaveBeenCalledWith('https://platform.deepseek.com/top_up', '_blank', expect.any(String))
+  })
+
   it('趋势图 hover 柱子显示按模型明细 tooltip', () => {
     const t = (key: string) => key
     const { container } = render(<UsageStatsCard

@@ -745,8 +745,18 @@ function QuotaTab(props: {
           </div>
         ) : null}
         <div className={styles.deepseekActions}>
-          {/* 充值：跳转 DeepSeek 官方充值页（新标签页打开） */}
-          <a className={styles.btnPrimary} href="https://platform.deepseek.com/top_up" target="_blank" rel="noopener noreferrer">
+          {/* 充值：跳转 DeepSeek 官方充值页。壳会把 <a> 点击重写为内嵌预览
+              （DeepSeek 拒绝 frame 嵌入），故显式 window.open 强制新标签页。 */}
+          <a
+            className={styles.btnPrimary}
+            href="https://platform.deepseek.com/top_up"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              e.preventDefault()
+              window.open('https://platform.deepseek.com/top_up', '_blank', 'noopener,noreferrer')
+            }}
+          >
             {t('balance.recharge')}
           </a>
           <button type="button" className={styles.refresh} disabled={balanceRefreshing} onClick={onRefreshBalance}>
