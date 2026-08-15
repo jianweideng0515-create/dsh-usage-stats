@@ -324,7 +324,7 @@ function TrendAreaChart(props: {
   // Y 轴刻度：0 / 25% / 50% / 75% / 100% × axisMax
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => axisMax * f)
   const colW = (width - padX * 2) / series.length
-  const barW = Math.max(3, colW * 0.62)
+  const barW = Math.max(3, colW * 0.45)
   const barX = (i: number): number => padX + i * colW + (colW - barW) / 2
   // X 轴日期刻度抽样：超过 12 天时均匀取约 12 个（含首尾）
   const tickStep = Math.max(1, Math.ceil(series.length / 12))
