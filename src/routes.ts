@@ -41,13 +41,6 @@ function meterOf(ctx: Context): UsageStatsMeter {
   return (ctx as unknown as Record<symbol, UsageStatsMeter>)[USAGE_STATS_METER_KEY]
 }
 
-/** 最近活跃会话兜底：lastRequestAt 非 null 且最新的一条。 */
-function latestActiveSession(meter: UsageStatsMeter) {
-  return Object.values(meter.state().sessions)
-    .filter((session) => session.lastRequestAt !== null)
-    .sort((a, b) => (a.lastRequestAt! < b.lastRequestAt! ? 1 : -1))[0] ?? null
-}
-
 /** 构造 usage-stats 全部只读路由（loopback 围栏，全部先过 isLoopbackRequest）。 */
 export function makeRoutes(ctx: Context, balance: BalanceClient): WebRoute[] {
   const summary: WebRoute = {
@@ -65,13 +58,10 @@ export function makeRoutes(ctx: Context, balance: BalanceClient): WebRoute[] {
       if (!parsed.ok) { writeJson(res, 400, { error: parsed.error }); return }
       const meter = meterOf(ctx)
       const summary = summarizeRange(meter.state(), parsed.query)
+      // 会话维度仅在显式携带 sessionId 时附带（会话页用量组件用）；
+      // 设置页只统计总量，不带 sessionId 时 perSession 恒为 null。
       const sessionId = url.searchParams.get('sessionId')
-      let perSession = null
-      if (sessionId !== null) {
-        perSession = meter.state().sessions[sessionId] ?? null
-      } else {
-        perSession = latestActiveSession(meter)
-      }
+      const perSession = sessionId !== null ? (meter.state().sessions[sessionId] ?? null) : null
       writeJson(res, 200, { ...summary, perSession })
     },
   }
