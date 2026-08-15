@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
-import { USAGE_STATS_METER_KEY, USAGE_STATS_DEBUG_KEY } from './index.ts'
+import { USAGE_STATS_METER_KEY } from './index.ts'
 import { parseRange, summarizeRange } from './query.ts'
 import type { UsageStatsMeter } from './meter.ts'
 import type { BalanceClient } from './balance.ts'
@@ -96,9 +96,7 @@ export function makeRoutes(ctx: Context, balance: BalanceClient): WebRoute[] {
     handler: (req, res) => {
       if (!isLoopbackRequest(req)) { writeJson(res, 403, { error: 'forbidden' }); return }
       if (req.method !== 'GET') { writeJson(res, 405, { error: 'method not allowed' }); return }
-      const debugFn = (ctx as unknown as Record<symbol, unknown>)[USAGE_STATS_DEBUG_KEY]
-      const debug = typeof debugFn === 'function' ? debugFn() : null
-      writeJson(res, 200, { ...balance.snapshot(), debug })
+      writeJson(res, 200, balance.snapshot())
     },
   }
 
@@ -109,9 +107,7 @@ export function makeRoutes(ctx: Context, balance: BalanceClient): WebRoute[] {
     handler: async (req, res) => {
       if (!isLoopbackRequest(req)) { writeJson(res, 403, { error: 'forbidden' }); return }
       if (req.method !== 'POST') { writeJson(res, 405, { error: 'method not allowed' }); return }
-      const debugFn = (ctx as unknown as Record<symbol, unknown>)[USAGE_STATS_DEBUG_KEY]
-      const debug = typeof debugFn === 'function' ? debugFn() : null
-      writeJson(res, 200, { ...(await balance.refresh()), debug })
+      writeJson(res, 200, await balance.refresh())
     },
   }
 

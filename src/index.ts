@@ -25,9 +25,6 @@ export const inject = ['sessions', 'webServer', 'agentDefaultModel', 'llm']
 /** 宿主端在 ctx 上暴露 meter 的键（路由/余额任务读取）。 */
 export const USAGE_STATS_METER_KEY = Symbol('usage-stats.meter')
 
-/** 临时诊断键（余额排查用；验证后移除）。 */
-export const USAGE_STATS_DEBUG_KEY = Symbol('usage-stats.debug')
-
 export const USAGE_STATS_SETTINGS_NAMESPACE: SettingsNamespace = settingsNamespace('usage-stats')
 
 export interface Config {
@@ -201,31 +198,6 @@ export function apply(ctx: Context, config: Config = {}): void {
       saveNow(meter, store)
     }, 'usage-stats: final save')
     ;(ctx as unknown as Record<symbol, unknown>)[USAGE_STATS_METER_KEY] = meter
-    // 临时诊断（余额排查用；验证后移除）：只暴露结构信息，不输出任何密钥。
-    ;(ctx as unknown as Record<symbol, unknown>)[USAGE_STATS_DEBUG_KEY] = (): Record<string, unknown> => {
-      const cfg = resolve().balance ?? { mode: 'auto' }
-      const selection = (() => {
-        try { return (ctx as unknown as { agentDefaultModel?: { currentSelection(): unknown } }).agentDefaultModel?.currentSelection() } catch { return undefined }
-      })()
-      const entries = (() => {
-        try { return (ctx as unknown as { llm?: { listConfigurableProviders(): unknown[] } }).llm?.listConfigurableProviders() } catch { return undefined }
-      })()
-      const piAiRaw = settingsService?.get(settingsNamespace('llm-pi-ai'))
-      const shape = (value: unknown): unknown => {
-        if (Array.isArray(value)) return value.map(shape)
-        if (typeof value === 'object' && value !== null) {
-          return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, shape(v)]))
-        }
-        return typeof value
-      }
-      return {
-        balanceConfig: cfg,
-        settingsCaptured: settingsService !== undefined,
-        selection: selection === undefined ? undefined : shape(selection),
-        configurableProviders: entries === undefined ? undefined : shape(entries),
-        piAiSettingsShape: piAiRaw === undefined ? undefined : shape(piAiRaw),
-      }
-    }
 
     disposeFiber = () => {
       // 先注销路由，再注销事件，最后写盘。
