@@ -428,23 +428,25 @@ function OverviewTab(props: {
         </dl>
       ) : null}
       <h4 className={styles.heading}>{t('model.table')}</h4>
-      <table className={styles.table}>
-        <thead><tr><th>{t('metric.topModel')}</th><th className={styles.thRight}>{t('metric.requests')}</th><th className={styles.thRight}>{t('metric.tokens')}</th><th className={styles.thRight}>{t('metric.cost')}</th></tr></thead>
-        <tbody>
-          {summary.byModel.map((m, i) => (
-            <tr key={m.model} className={styles.trHover}>
-              <td>
-                <span className={styles.modelDot} style={{ background: DONUT_SEGMENT_VARS[i % DONUT_SEGMENT_VARS.length] }} />
-                <strong>{m.model}</strong>
-                {m.model === '__unknown__' ? <span className={styles.unknownTag}>__unknown__</span> : null}
-              </td>
-              <td className={styles.tdRight}>{m.requests}</td>
-              <td className={`${styles.tdRight} ${styles.tdStrong}`}>{formatTokens(m.tokens)}</td>
-              <td className={styles.tdRight}>{formatCost(m.cost)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className={styles.tableCard}>
+        <table className={styles.table}>
+          <thead><tr><th>{t('metric.topModel')}</th><th className={styles.thRight}>{t('metric.requests')}</th><th className={styles.thRight}>{t('metric.tokens')}</th><th className={styles.thRight}>{t('metric.cost')}</th></tr></thead>
+          <tbody>
+            {summary.byModel.map((m, i) => (
+              <tr key={m.model} className={styles.trHover}>
+                <td>
+                  <span className={styles.modelDot} style={{ background: DONUT_SEGMENT_VARS[i % DONUT_SEGMENT_VARS.length] }} />
+                  {m.model === '__unknown__' ? <strong>{t('model.unknown')}</strong> : <strong>{m.model}</strong>}
+                  {m.model === '__unknown__' ? <span className={styles.unknownTag}>__unknown__</span> : null}
+                </td>
+                <td className={styles.tdRight}>{m.requests}</td>
+                <td className={`${styles.tdRight} ${styles.tdStrong}`}>{formatTokens(m.tokens)}</td>
+                <td className={styles.tdRight}>{formatCost(m.cost)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {summary.uncountedRequests > 0 ? <p className={styles.status}>{t('metric.uncounted')}: {summary.uncountedRequests}</p> : null}
     </>
   )

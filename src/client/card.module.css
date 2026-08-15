@@ -625,6 +625,15 @@
   white-space: nowrap;
 }
 
+/* 模型明细表卡片外壳（参考 tableCard） */
+.tableCard {
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-layer-2);
+  min-width: 0;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -643,6 +652,10 @@
   text-overflow: ellipsis;
 }
 
+.table thead th {
+  background: color-mix(in srgb, var(--dsw-alias-bg-layer-3) 60%, transparent);
+}
+
 .table th {
   font-size: 11px;
   font-weight: 500;
@@ -651,6 +664,10 @@
 
 .table td {
   color: var(--dsw-alias-label-primary);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 /* 数值列右对齐 + 等宽（参考 tdRight） */
@@ -723,10 +740,10 @@
   cursor: default;
 }
 
-/* KPI 指标卡网格（参考 kpiGrid：4 列） */
+/* KPI 指标卡网格（参考 kpiGrid；自适应列数：容器宽 4 列，窄时自动降列保证卡片宽度） */
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   min-width: 0;
 }
@@ -820,7 +837,7 @@
 
 .kpiTopRow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 6px;
   min-width: 0;
@@ -830,15 +847,10 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary);
-  /* 允许换行：窄卡片下「OpenCode Go」等长名称不被截断 */
-  white-space: normal;
-  line-height: 1.3;
-  min-width: 0;
+  /* 单行不换行：宽度由自适应列数保证；极端窄时省略号兜底 */
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
 }
 
 .kpiValueAccent {

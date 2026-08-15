@@ -94,6 +94,7 @@ export interface UsageStatsCopy {
   'balance.unavailable': string
   'balance.source': string
   'model.table': string
+  'model.unknown': string
   'trend.title': string
   'chart.donut': string
   'chart.hitRate': string
@@ -224,6 +225,7 @@ export const zh: UsageStatsCopy = {
   'balance.unavailable': '余额不可用',
   'balance.source': '来源',
   'model.table': '模型明细',
+  'model.unknown': '未标记模型',
   'trend.title': '用量趋势',
   'chart.donut': '模型占比',
   'chart.hitRate': '命中率趋势',
@@ -351,6 +353,7 @@ export const en: UsageStatsCopy = {
   'balance.unavailable': 'Balance unavailable',
   'balance.source': 'Source',
   'model.table': 'Model breakdown',
+  'model.unknown': 'Unmarked model',
   'trend.title': 'Usage trend',
   'chart.donut': 'Model share',
   'chart.hitRate': 'Hit rate trend',
