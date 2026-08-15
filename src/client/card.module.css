@@ -825,9 +825,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 费用：克制的中性主色，与 Tokens 同色系（彩色只保留给命中率） */
+/* 费用：克制的 info 蓝（低饱和强调；彩色语义：蓝=金额，绿=命中率） */
 .valHighlightCost {
-  color: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary));
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -978,6 +978,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 费用数字：克制的 info 蓝（与按钮/最近单次卡的费用同色） */
+.statNumberCost {
+  color: var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary));
+}
+
 .statUnit {
   font-size: 0.75rem;
   font-weight: 600;
@@ -1076,6 +1081,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 费用值：克制的 info 蓝（与按钮/hero 卡费用同色） */
+.recentValueCost {
+  color: var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary));
 }
 
 .unpricedHint {

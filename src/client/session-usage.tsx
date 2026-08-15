@@ -324,7 +324,7 @@ export function SessionUsageButton(props: {
                     </div>
                     <div className={styles.heroCol}>
                       <div className={styles.statNumGroup}>
-                        <span className={styles.statNumber}>{costSym}{formatCost(session.cost)}{unpriced ? '*' : ''}</span>
+                        <span className={`${styles.statNumber} ${styles.statNumberCost}`}>{costSym}{formatCost(session.cost)}{unpriced ? '*' : ''}</span>
                       </div>
                       <div className={styles.statLabel}>{t('session.heroCost')}</div>
                     </div>
@@ -355,7 +355,7 @@ export function SessionUsageButton(props: {
                     <span className={styles.recentLabel}>{t('session.recentTokens')}</span>
                     <span className={styles.recentValue}>{turnTokensCompact === null ? '-' : `${turnTokensCompact.value}${turnTokensCompact.unit} Tokens`}</span>
                     <span className={styles.recentLabel}>{t('session.recentCost')}</span>
-                    <span className={styles.recentValue}>{turnCost === null ? '-' : `${costSym}${formatCost(turnCost)}`}</span>
+                    <span className={`${styles.recentValue} ${styles.recentValueCost}`}>{turnCost === null ? '-' : `${costSym}${formatCost(turnCost)}`}</span>
                   </div>
                 </div>
                 {unpriced ? (
