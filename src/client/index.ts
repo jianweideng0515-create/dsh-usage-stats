@@ -5,7 +5,8 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 // Type-only: pulls the conversation SlotMap merge ('conversation.session.header.utilities').
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { UsageStatsCardController, UsageStatsSlotCard } from './UsageStatsCard.tsx'
+import { UsageStatsCardController, UsageStatsSlotCard, setStatsShared } from './UsageStatsCard.tsx'
+import { UsageStatsSection } from './UsageStatsSection.tsx'
 import { SessionUsageController, SessionUsageSlotButton } from './session-usage.tsx'
 import { zh, en } from './locales.ts'
 import type { UsageStatsCopy } from './locales.ts'
@@ -38,7 +39,23 @@ export interface SettingsPluginItemOwnerProps {
 
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'usage-stats: dictionaries')
+  const bound = ctx.locale.bind(NS)
+  const t = (key: string) => bound(key as keyof UsageStatsCopy)
   const controller = new UsageStatsCardController()
+  // 共享 face（section 页 + 插件卡共用同一 controller 与 store，数据一致）。
+  setStatsShared({ face: controller.inject(), t })
+
+  // 左侧导航专属 Tab（settings.section 一级入口）：不挂在「插件」分类下。
+  // 导航图标由 shell 的 navIcon(id) 硬编码映射（未知 id 回退齿轮图标），
+  // 页内头部自绘柱状图图标作为品牌识别。
+  ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section',
+    id: 'usage-stats',
+    order: 40,
+    label: () => t('nav.usage'),
+    locale: NS,
+  }, UsageStatsSection))
+
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',
     id: 'usage-stats',

@@ -2,6 +2,7 @@
 export interface UsageStatsCopy {
   'settings.title': string
   'settings.description': string
+  'nav.usage': string
   'settings.enabled': string
   'settings.enabledHint': string
   'card.active': string
@@ -133,6 +134,7 @@ export type SettingsCardKey = keyof typeof zh
 export const zh: UsageStatsCopy = {
   'settings.title': 'API 用量统计',
   'settings.description': 'Token、请求、轮次、缓存命中、费用估算与余额。',
+  'nav.usage': '用量统计',
   'settings.enabled': '启用用量统计',
   'settings.enabledHint': '关闭后停止统计与余额刷新。',
   'card.active': '已激活',
@@ -261,6 +263,7 @@ export const zh: UsageStatsCopy = {
 export const en: UsageStatsCopy = {
   'settings.title': 'API usage stats',
   'settings.description': 'Tokens, requests, turns, cache hits, cost estimates and balance.',
+  'nav.usage': 'Usage stats',
   'settings.enabled': 'Enable usage stats',
   'settings.enabledHint': 'When off, tracking and balance refresh stop.',
   'card.active': 'Active',

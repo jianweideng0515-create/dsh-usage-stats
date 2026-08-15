@@ -839,6 +839,15 @@ export interface UsageStatsCardFace extends UsageStatsCardActions {
   }
 }
 
+/** 设置页 section 与插件卡共享的 controller face（apply 注入）。 */
+export interface StatsShared {
+  face: UsageStatsCardFace
+  t: (key: string) => string
+}
+
+export let statsShared: StatsShared | null = null
+export function setStatsShared(shared: StatsShared): void { statsShared = shared }
+
 const REFRESH_INTERVAL_MS = 30_000
 
 function fmtDate(d: Date): string {
