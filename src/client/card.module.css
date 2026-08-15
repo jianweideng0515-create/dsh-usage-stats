@@ -741,6 +741,10 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  /* 宽度不足时禁止换行/收缩（中文标签逐字断行 + flex 压缩会把内容挤到两行） */
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  flex: none;
   background-color: var(--dsw-alias-bg-layer-2);
   border: 1px solid var(--dsw-alias-border-l2);
   color: var(--dsw-alias-label-secondary);
@@ -752,6 +756,13 @@
   cursor: pointer;
   transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.08);
+}
+
+/* 按钮子项禁止收缩与断行 */
+.sessionUsage > span,
+.sessionUsageActive > span {
+  flex: none;
+  white-space: nowrap;
 }
 
 .sessionUsage:hover {
