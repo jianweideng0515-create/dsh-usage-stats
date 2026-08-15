@@ -91,8 +91,8 @@ describe('detectBalanceEndpoints', () => {
       settings: { get: () => undefined },
     })
     const map = detectBalanceEndpoints(ctx, { mode: 'auto' })
-    // opencode-go 来自 llm 列表；deepseek 不在列表时由已知表兜底
-    expect(map['opencode-go'].ok).toBe(true)
+    // opencode-go 归一化为展示 key 'opencode'（来自 llm 列表）；deepseek 不在列表时由已知表兜底
+    expect(map['opencode'].ok).toBe(true)
     expect(map['deepseek'].ok).toBe(true)
     if (map['deepseek'].ok) {
       expect(map['deepseek'].endpoint.baseUrl).toBe('https://api.deepseek.com')

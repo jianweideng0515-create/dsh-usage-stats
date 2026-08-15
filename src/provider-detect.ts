@@ -214,7 +214,10 @@ export function detectBalanceEndpoints(
   for (const key of Object.keys(knownProviderEndpoints)) providers.add(key)
   const result: Record<string, DetectResult> = {}
   for (const provider of providers) {
-    result[provider] = detectProviderEndpoint(ctx, provider, settingsService)
+    // 快照表 key 用展示用 provider id（与前端 ProviderId 一致）：
+    // llm 的 opencode-go 归一化为 opencode，deepseek 原样。
+    const snapshotKey = provider === 'opencode-go' ? 'opencode' : provider
+    result[snapshotKey] = detectProviderEndpoint(ctx, provider, settingsService)
   }
   return result
 }
