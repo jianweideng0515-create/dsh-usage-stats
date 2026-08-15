@@ -87,4 +87,22 @@ describe('summarizeRange', () => {
     const s = summarizeRange(state, r.query)
     expect(s.series[0].hitRate).toBe(0)
   })
+  it('趋势序列按模型拆分 tokens（降序）', () => {
+    const date = localDateKey(NOW - 86_400_000)
+    const b1 = { ...createEmptyBucket(), requests: 1, uncachedInputTokens: 30, outputTokens: 10 }
+    const b2 = { ...createEmptyBucket(), requests: 1, uncachedInputTokens: 60, outputTokens: 20 }
+    const state: UsageStatsState = {
+      totals: createEmptyBucket(),
+      byDay: { [date]: { bucket: { ...createEmptyBucket(), requests: 2, uncachedInputTokens: 90, outputTokens: 30 }, byModel: { a: b1, b: b2 } } },
+      sessions: {},
+    }
+    const r = parseRange(date, date, NOW)
+    if (!r.ok) throw new Error('range')
+    const s = summarizeRange(state, r.query)
+    expect(s.series[0].tokens).toBe(120)
+    expect(s.series[0].byModel).toEqual([
+      { model: 'b', tokens: 80 },
+      { model: 'a', tokens: 40 },
+    ])
+  })
 })

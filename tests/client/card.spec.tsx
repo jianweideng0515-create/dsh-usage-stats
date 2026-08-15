@@ -20,7 +20,7 @@ const summary: SummaryResponse = {
   cost: 0.35, activeDays: 2, avgCacheHitRate: 0.31, topModel: 'deepseek-chat',
   uncountedRequests: 1,
   byModel: [{ model: 'deepseek-chat', requests: 11, tokens: 1700, cost: 0.33 }],
-  series: [{ bucket: '2026-08-14', requests: 5, tokens: 800, cost: 0.15, hitRate: 0.3 }],
+  series: [{ bucket: '2026-08-14', requests: 5, tokens: 800, cost: 0.15, hitRate: 0.3, byModel: [] }],
   perSession: { sessionId: 's1', workspace: null, turns: 3, requests: 4, cost: 0.1, lastRequestAt: null, lastModel: 'deepseek-chat', lastRequestCost: 0.05, lastRequestHitRate: 0.4 },
 }
 
@@ -140,6 +140,39 @@ describe('UsageStatsCard', () => {
     />)
     fireEvent.click(screen.getByText('tab.quota'))
     expect(screen.getByText(/provider does not expose an endpoint/)).toBeTruthy()
+  })
+
+  it('趋势图 hover 柱子显示按模型明细 tooltip', () => {
+    const t = (key: string) => key
+    const { container } = render(<UsageStatsCard
+      t={t}
+      summary={{
+        ...summary,
+        series: [
+          { bucket: '2026-08-15', requests: 100, tokens: 30_000_000, cost: 0.2, hitRate: 0.95, byModel: [{ model: 'deepseek-chat', tokens: 20_000_000 }, { model: 'deepseek-r1', tokens: 10_000_000 }] },
+          { bucket: '2026-08-16', requests: 200, tokens: 40_000_000, cost: 0.3, hitRate: 0.9, byModel: [{ model: 'deepseek-chat', tokens: 40_000_000 }] },
+        ],
+      }}
+      balance={{ balance: 12.34, currency: 'CNY', updatedAt: null, error: null, source: null, quota: null, costCurrency: 'CNY' }}
+      loading={false}
+      error={null}
+      {...baseProps}
+    />)
+    // 悬停第一天柱子 → tooltip：日期 / 总用量（万）/ 分模型 / 命中率 / 费用
+    const hitAreas = container.querySelectorAll('[data-trend-hit="true"]')
+    expect(hitAreas.length).toBe(2)
+    fireEvent.mouseEnter(hitAreas[0])
+    expect(screen.getByText('2026-08-15')).toBeTruthy()
+    expect(screen.getByText('3000.0万')).toBeTruthy()
+    // 模型名在 tooltip 与模型明细表各出现一次
+    expect(screen.getAllByText('deepseek-chat').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('deepseek-r1')).toBeTruthy()
+    expect(screen.getByText('95.00%')).toBeTruthy()
+    // 悬停第二天 → 单模型明细 + 命中率变化（4000.0万：总用量与 deepseek-chat 模型行同值）
+    fireEvent.mouseEnter(hitAreas[1])
+    expect(screen.getByText('2026-08-16')).toBeTruthy()
+    expect(screen.getAllByText('4000.0万').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('90.00%')).toBeTruthy()
   })
 })
 

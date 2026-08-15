@@ -89,6 +89,9 @@ export interface UsageStatsCopy {
   'model.table': string
   'model.unknown': string
   'trend.title': string
+  'trend.total': string
+  'trend.cost': string
+  'trend.hitRate': string
   'chart.donut': string
   'chart.hitRate': string
   'chart.cost': string
@@ -213,6 +216,9 @@ export const zh: UsageStatsCopy = {
   'model.table': '模型明细',
   'model.unknown': '未标记模型',
   'trend.title': '用量趋势',
+  'trend.total': '总用量',
+  'trend.cost': '费用',
+  'trend.hitRate': '缓存命中率',
   'chart.donut': '模型占比',
   'chart.hitRate': '命中率趋势',
   'chart.cost': '费用趋势',
@@ -334,6 +340,9 @@ export const en: UsageStatsCopy = {
   'model.table': 'Model breakdown',
   'model.unknown': 'Unmarked model',
   'trend.title': 'Usage trend',
+  'trend.total': 'Total usage',
+  'trend.cost': 'Cost',
+  'trend.hitRate': 'Cache hit rate',
   'chart.donut': 'Model share',
   'chart.hitRate': 'Hit rate trend',
   'chart.cost': 'Cost trend',

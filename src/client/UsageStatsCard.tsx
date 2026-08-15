@@ -276,12 +276,49 @@ function TokenSplitBar(props: {
   )
 }
 
-/** 用量趋势面积折线（无库 SVG）：网格线 + 渐变面积 + 折线 + 数据点 + 日期刻度。 */
+/** 中文 token 单位：≥1 亿显示亿（两位小数），≥1 万显示万（一位小数），否则原样。 */
+function formatCnTokens(tokens: number): string {
+  if (tokens >= 1e8) return `${(tokens / 1e8).toFixed(2)}亿`
+  if (tokens >= 1e4) return `${(tokens / 1e4).toFixed(1)}万`
+  return String(tokens)
+}
+
+/** Y 轴上限取整到 1/2/5×10^n，保证刻度整洁（无数据时兜底为 1）。 */
+function niceAxisMax(value: number): number {
+  if (value <= 0) return 1
+  const exp = Math.floor(Math.log10(value))
+  const base = 10 ** exp
+  const factor = value / base
+  const nice = factor <= 1 ? 1 : factor <= 2 ? 2 : factor <= 5 ? 5 : 10
+  return nice * base
+}
+
+/** 桶内模型分段：tokens 降序 Top 5 + 「其他」聚合，取色与模型占比 Donut 一致。 */
+function bucketSegments(
+  point: { byModel: Array<{ model: string; tokens: number }> },
+  t: (key: string) => string,
+): Array<{ model: string; tokens: number; colorVar: string }> {
+  const label = (model: string): string => model === '__unknown__' ? t('model.unknown') : model
+  const sorted = [...point.byModel].sort((a, b) => b.tokens - a.tokens)
+  if (sorted.length <= 5) {
+    return sorted.map((m, i) => ({ model: label(m.model), tokens: m.tokens, colorVar: DONUT_SEGMENT_VARS[i % DONUT_SEGMENT_VARS.length] }))
+  }
+  const top = sorted.slice(0, 5)
+  const rest = sorted.slice(5).reduce((sum, m) => sum + m.tokens, 0)
+  return [
+    ...top.map((m, i) => ({ model: label(m.model), tokens: m.tokens, colorVar: DONUT_SEGMENT_VARS[i] })),
+    { model: t('chart.other'), tokens: rest, colorVar: DONUT_SEGMENT_VARS[5] },
+  ]
+}
+
+/** 用量趋势堆叠柱状图（无库 SVG + CSS）：Y 轴刻度 + 按模型分段 + hover 明细 tooltip。 */
 function TrendAreaChart(props: {
   t: (key: string) => string
-  series: Array<{ bucket: string; tokens: number }>
+  costCurrency: string
+  series: Array<{ bucket: string; tokens: number; cost: number; hitRate: number; byModel: Array<{ model: string; tokens: number }> }>
 }): ReactElement {
-  const { t, series } = props
+  const { t, costCurrency, series } = props
+  const [hover, setHover] = useState<number | null>(null)
   const width = 600
   const height = 140
   const padY = 12
@@ -289,49 +326,113 @@ function TrendAreaChart(props: {
   if (series.length < 2) {
     return <p className={styles.status}>{t('chart.insufficientData')}</p>
   }
-  const max = Math.max(...series.map((p) => p.tokens), 1e-9)
-  const min = Math.min(...series.map((p) => p.tokens))
-  const span = Math.max(max - min, 1e-9)
+  const axisMax = niceAxisMax(Math.max(...series.map((p) => p.tokens), 1e-9))
   const innerH = height - padY * 2
-  const x = (i: number): number => padX + (i * (width - padX * 2)) / (series.length - 1)
-  const y = (v: number): number => padY + innerH - ((v - min) / span) * innerH
-  const line = series.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.tokens).toFixed(1)}`).join(' ')
-  const area = `${line} L${x(series.length - 1).toFixed(1)},${height} L${x(0).toFixed(1)},${height} Z`
+  const y = (v: number): number => padY + innerH - (v / axisMax) * innerH
+  // Y 轴刻度：0 / 25% / 50% / 75% / 100% × axisMax
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => axisMax * f)
+  const colW = (width - padX * 2) / series.length
+  const barW = Math.max(3, colW * 0.62)
+  const barX = (i: number): number => padX + i * colW + (colW - barW) / 2
+  // X 轴日期刻度抽样：超过 12 天时均匀取约 12 个（含首尾）
+  const tickStep = Math.max(1, Math.ceil(series.length / 12))
+  const xTicks = series.filter((_, i) => i % tickStep === 0 || (i === series.length - 1 && (series.length - 1) % tickStep !== 0))
+  const hovered = hover !== null ? series[hover] : null
+  const hoverCenter = hover !== null ? ((hover + 0.5) / series.length) * 100 : 0
   return (
     <div className={styles.trendChart}>
-      <svg
-        className={styles.trendSvg}
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={series.map((p) => `${p.bucket}: ${formatTokens(p.tokens)}`).join('; ')}
-      >
-        <defs>
-          <linearGradient id="trendAreaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--dsw-alias-state-business-primary)" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="var(--dsw-alias-state-business-primary)" stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
-        {/* 网格线（三等分） */}
-        {[0, 1, 2, 3].map((i) => (
-          <line
-            key={i}
-            x1={padX} x2={width - padX}
-            y1={(padY + (innerH * i) / 3).toFixed(1)}
-            y2={(padY + (innerH * i) / 3).toFixed(1)}
-            stroke="var(--dsw-alias-border-l2)"
-            strokeWidth="1"
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
-        <path d={area} fill="url(#trendAreaGrad)" />
-        <path d={line} fill="none" stroke="var(--dsw-alias-state-business-primary)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        {series.map((p, i) => (
-          <circle key={p.bucket} cx={x(i).toFixed(1)} cy={y(p.tokens).toFixed(1)} r="3" fill="var(--dsw-alias-state-business-primary)" stroke="var(--dsw-alias-bg-layer-3)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-        ))}
-      </svg>
+      <div className={styles.trendBody}>
+        <div className={styles.trendYAxis} aria-hidden="true">
+          {ticks.map((v) => (
+            <span
+              key={v}
+              className={styles.trendYTick}
+              style={{
+                top: `${(y(v) / height) * 100}%`,
+                transform: v === 0 ? 'translateY(0)' : v === axisMax ? 'translateY(-100%)' : 'translateY(-50%)',
+              }}
+            >
+              {formatCnTokens(v)}
+            </span>
+          ))}
+        </div>
+        <div className={styles.trendPlot} onMouseLeave={() => setHover(null)}>
+          <svg
+            className={styles.trendSvg}
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            role="img"
+            aria-label={series.map((p) => `${p.bucket}: ${formatCnTokens(p.tokens)}`).join('; ')}
+          >
+            {/* 网格线：对齐 Y 轴刻度 */}
+            {ticks.map((v) => (
+              <line
+                key={v}
+                x1={padX} x2={width - padX}
+                y1={y(v).toFixed(1)} y2={y(v).toFixed(1)}
+                stroke="var(--dsw-alias-border-l2)"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+            {series.map((p, i) => {
+              const segs = bucketSegments(p, t)
+              let base = height
+              return (
+                <g key={p.bucket} onMouseEnter={() => setHover(i)}>
+                  {/* 整列透明命中区：整列可悬停 */}
+                  <rect data-trend-hit="true" className={styles.trendHit} x={padX + i * colW} y={padY} width={colW} height={innerH} fill="transparent" />
+                  {/* hover 列高亮背景 */}
+                  {hover === i ? (
+                    <rect x={padX + i * colW} y={padY} width={colW} height={innerH} fill="var(--dsw-alias-state-business-primary)" opacity="0.06" />
+                  ) : null}
+                  {segs.map((s) => {
+                    const segH = (s.tokens / axisMax) * innerH
+                    const top = base - segH
+                    base = top
+                    return (
+                      <rect
+                        key={s.model}
+                        x={barX(i)}
+                        y={top}
+                        width={barW}
+                        height={Math.max(0, segH)}
+                        fill={s.colorVar}
+                      />
+                    )
+                  })}
+                </g>
+              )
+            })}
+          </svg>
+          {hovered !== null ? (
+            <div
+              className={styles.trendTooltip}
+              style={{
+                left: `${hoverCenter}%`,
+                transform: hoverCenter > 78 ? 'translateX(-100%)' : 'translateX(-50%)',
+              }}
+              role="tooltip"
+            >
+              <div className={styles.tooltipDate}>{hovered.bucket}</div>
+              <div className={styles.tooltipRow}><span>{t('trend.total')}</span><strong>{formatCnTokens(hovered.tokens)}</strong></div>
+              <div className={styles.tooltipRow}><span>{t('trend.cost')}</span><strong>{costSymbol(costCurrency)}{formatCost(hovered.cost)}</strong></div>
+              <div className={styles.tooltipModels}>
+                {bucketSegments(hovered, t).map((s) => (
+                  <div className={styles.tooltipModel} key={s.model}>
+                    <span className={styles.dot} style={{ background: s.colorVar }} />
+                    <span className={styles.tooltipModelName}>{s.model}</span>
+                    <strong>{formatCnTokens(s.tokens)}</strong>
+                  </div>
+                ))}
+              </div>
+              <div className={styles.tooltipRow}><span>{t('trend.hitRate')}</span><strong>{formatRate(hovered.hitRate)}</strong></div>
+            </div>
+          ) : null}
+        </div>
+      </div>
       <div className={styles.trendAxis}>
-        {series.map((p) => (
+        {xTicks.map((p) => (
           <span key={p.bucket} className={styles.trendTick}>{p.bucket.slice(5)}</span>
         ))}
       </div>
@@ -453,7 +554,7 @@ function OverviewTab(props: {
   return (
     <>
       <h4 className={styles.heading}>{t('trend.title')}</h4>
-      <TrendAreaChart t={t} series={summary.series} />
+      <TrendAreaChart t={t} costCurrency={costCurrency} series={summary.series} />
       {summary.perSession !== null ? (
         <dl className={styles.metrics}>
           <div><dt>{t('metric.lastHit')}</dt><dd>{summary.perSession.lastRequestHitRate === null ? '-' : formatRate(summary.perSession.lastRequestHitRate)}</dd></div>

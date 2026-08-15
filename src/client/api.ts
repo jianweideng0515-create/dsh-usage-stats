@@ -13,6 +13,8 @@ export interface SeriesPoint {
   tokens: number
   cost: number
   hitRate: number
+  /** 桶内按模型拆分的 token 用量（tokens 降序，供堆叠柱状图与 tooltip）。 */
+  byModel: Array<{ model: string; tokens: number }>
 }
 
 export interface ModelSummary {

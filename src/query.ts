@@ -5,7 +5,15 @@ import type { TokenBuckets, UsageStatsState } from './meter.ts'
 export interface RangeQuery { from: string; to: string; granularity: 'day' | 'week' }
 
 /** 趋势序列点：单日或自然周的聚合（hitRate 为该桶缓存命中率，无输入为 0）。 */
-export interface SeriesPoint { bucket: string; requests: number; tokens: number; cost: number; hitRate: number }
+export interface SeriesPoint {
+  bucket: string
+  requests: number
+  tokens: number
+  cost: number
+  hitRate: number
+  /** 桶内按模型拆分的 token 用量（tokens 降序，供堆叠柱状图与 tooltip）。 */
+  byModel: Array<{ model: string; tokens: number }>
+}
 
 /** 分模型聚合行。 */
 export interface ModelSummary { model: string; requests: number; tokens: number; cost: number }
@@ -81,18 +89,19 @@ export function summarizeRange(state: UsageStatsState, query: RangeQuery): Range
   const byModel = new Map<string, { requests: number; tokens: number; cost: number }>()
   const series = new Map<string, SeriesPoint>()
   const bucketInput = new Map<string, number>() // 桶内输入合计（cacheRead+uncached+cacheWrite），用于换算 hitRate
+  const bucketModels = new Map<string, Map<string, number>>() // 桶内模型 → token 合计（堆叠柱状图分段）
 
   // 补零骨架：范围内逐日（day）或逐自然周（week）预置零值桶，保证趋势图时间轴连续
   const DAY_MS = 86_400_000
   if (query.granularity === 'day') {
     for (let t = Date.parse(query.from + 'T12:00:00'); t <= Date.parse(query.to + 'T12:00:00'); t += DAY_MS) {
       const bucket = localDateKey(t)
-      series.set(bucket, { bucket, requests: 0, tokens: 0, cost: 0, hitRate: 0 })
+      series.set(bucket, { bucket, requests: 0, tokens: 0, cost: 0, hitRate: 0, byModel: [] })
     }
   } else {
     for (let t = Date.parse(weekKey(query.from) + 'T12:00:00'); t <= Date.parse(weekKey(query.to) + 'T12:00:00'); t += 7 * DAY_MS) {
       const bucket = localDateKey(t)
-      series.set(bucket, { bucket, requests: 0, tokens: 0, cost: 0, hitRate: 0 })
+      series.set(bucket, { bucket, requests: 0, tokens: 0, cost: 0, hitRate: 0, byModel: [] })
     }
   }
   let requests = 0
@@ -125,17 +134,22 @@ export function summarizeRange(state: UsageStatsState, query: RangeQuery): Range
       if (model === UNKNOWN_MODEL) uncountedRequests += mb.requests
     }
     const bucketKey = query.granularity === 'day' ? date : weekKey(date)
-    let point = series.get(bucketKey)
-    if (point === undefined) {
-      point = { bucket: bucketKey, requests: 0, tokens: 0, cost: 0, hitRate: 0 }
-      series.set(bucketKey, point)
-    }
+    const point = series.get(bucketKey)
+    if (point === undefined) continue // 理论不可达：数据日期必在补零骨架内
     point.requests += b.requests
     point.tokens += b.uncachedInputTokens + b.cacheReadTokens + b.cacheWriteTokens + b.outputTokens
     point.cost += b.cost
     point.hitRate += b.cacheReadTokens
-    series.set(bucketKey, point)
     bucketInput.set(bucketKey, (bucketInput.get(bucketKey) ?? 0) + b.uncachedInputTokens + b.cacheReadTokens + b.cacheWriteTokens)
+    // 桶内模型拆分（tokens 口径与 point.tokens 一致）
+    let models = bucketModels.get(bucketKey)
+    if (models === undefined) {
+      models = new Map<string, number>()
+      bucketModels.set(bucketKey, models)
+    }
+    for (const [model, mb] of Object.entries(day.byModel)) {
+      models.set(model, (models.get(model) ?? 0) + mb.uncachedInputTokens + mb.cacheReadTokens + mb.cacheWriteTokens + mb.outputTokens)
+    }
   }
   tokens.total = tokens.uncachedInputTokens + tokens.cacheReadTokens + tokens.cacheWriteTokens + tokens.outputTokens
 
@@ -143,6 +157,11 @@ export function summarizeRange(state: UsageStatsState, query: RangeQuery): Range
   for (const point of series.values()) {
     const input = bucketInput.get(point.bucket) ?? 0
     point.hitRate = input <= 0 ? 0 : point.hitRate / input
+    // 桶内模型列表按 tokens 降序（供前端 Top5+其他 分段）
+    const models = bucketModels.get(point.bucket)
+    point.byModel = models === undefined
+      ? []
+      : [...models.entries()].map(([model, tokens]) => ({ model, tokens })).sort((a, b) => b.tokens - a.tokens)
   }
 
   const modelList = [...byModel.entries()]
