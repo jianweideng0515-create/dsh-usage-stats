@@ -51,9 +51,13 @@ describe('UsageStatsCard', () => {
       error={null}
       {...baseProps}
     />)
-    // 默认在「用量概览」Tab：KPI 请求数量 / 轮次+天数 sub / 模型明细
+    // 默认在「用量概览」Tab：KPI 请求数量 / 轮次卡 / 天数卡 / 模型明细
     expect(screen.getAllByText('12').length).toBeGreaterThan(0)
-    expect(screen.getByText(/9 metric\.turns · 2 kpi\.daysUnit/)).toBeTruthy()
+    // 完成轮次卡：值 9 + 标题
+    expect(screen.getByText('9')).toBeTruthy()
+    expect(screen.getAllByText('metric.turns').length).toBeGreaterThan(0)
+    // 活跃天数卡：值 2
+    expect(screen.getByText('2')).toBeTruthy()
     expect(screen.getAllByText('deepseek-chat').length).toBeGreaterThan(0)
     // 提供商动态卡默认 opencode（无配额数据 → 未接入占位）
     expect(screen.getAllByText('provider.notConnected').length).toBeGreaterThan(0)

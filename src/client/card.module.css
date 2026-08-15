@@ -806,6 +806,14 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-height: 13px;
+}
+
+/* 费用估算值：克制的 info 蓝强调（与会话页费用同色） */
+.kpiCostVal {
+  color: var(--dsw-alias-state-info-primary, var(--dsw-alias-state-business-primary));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* 缓存命中率强调色（与参考翡翠绿一致） */

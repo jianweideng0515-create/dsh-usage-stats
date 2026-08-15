@@ -137,7 +137,7 @@ function DonutChart(props: {
 }
 
 /** KPI 卡内联图标（无外部依赖、无 emoji）。 */
-function KpiIcon(props: { kind: 'chart' | 'send' | 'bolt' | 'wallet' }): ReactElement {
+function KpiIcon(props: { kind: 'chart' | 'send' | 'bolt' | 'wallet' | 'turns' | 'days' }): ReactElement {
   const { kind } = props
   if (kind === 'chart') {
     return (
@@ -164,6 +164,24 @@ function KpiIcon(props: { kind: 'chart' | 'send' | 'bolt' | 'wallet' }): ReactEl
       </svg>
     )
   }
+  if (kind === 'turns') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M21 12a9 9 0 1 1-9-9" />
+        <path d="M21 3v6h-6" />
+      </svg>
+    )
+  }
+  if (kind === 'days') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect width="18" height="18" x="3" y="4" rx="2" />
+        <path d="M16 2v4" />
+        <path d="M8 2v4" />
+        <path d="M3 10h18" />
+      </svg>
+    )
+  }
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
@@ -171,6 +189,13 @@ function KpiIcon(props: { kind: 'chart' | 'send' | 'bolt' | 'wallet' }): ReactEl
       <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
     </svg>
   )
+}
+
+/** 费用计价货币符号：CNY → ¥，USD → $，其他货币原样前缀。 */
+function costSymbol(currency: string): string {
+  if (currency === 'CNY') return '¥'
+  if (currency === 'USD') return '$'
+  return currency === '' ? '' : `${currency} `
 }
 
 /** 单条 SVG 折线（无库）：数据点不足阈值时返回 null，由调用方显示占位。 */
@@ -369,7 +394,9 @@ function KpiOverview(props: {
             <KpiIcon kind="chart" />
           </div>
           <dd className={styles.kpiValue} title={t('metric.tokensHint')}>{formatTokens(summary.tokens.total)}</dd>
-          <dd className={styles.kpiSub}>{t('kpi.costPrefix')}: {formatCost(summary.cost)}</dd>
+          <dd className={styles.kpiSub}>
+            {t('kpi.costPrefix')}: <strong className={styles.kpiCostVal}>{costSymbol(balance?.costCurrency ?? '')}{formatCost(summary.cost)}</strong>
+          </dd>
         </div>
         <div className={styles.kpiCard}>
           <div className={styles.kpiTop}>
@@ -377,7 +404,23 @@ function KpiOverview(props: {
             <KpiIcon kind="send" />
           </div>
           <dd className={styles.kpiValue}>{summary.requests}</dd>
-          <dd className={styles.kpiSub}>{summary.turns} {t('metric.turns')} · {summary.activeDays} {t('kpi.daysUnit')}</dd>
+          <dd className={styles.kpiSub}>{summary.uncountedRequests > 0 ? `${t('metric.uncounted')} ${summary.uncountedRequests}` : ''}</dd>
+        </div>
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <span>{t('metric.turns')}</span>
+            <KpiIcon kind="turns" />
+          </div>
+          <dd className={styles.kpiValue}>{summary.turns}</dd>
+          <dd className={styles.kpiSub}>{t('metric.turns')}</dd>
+        </div>
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <span>{t('metric.activeDays')}</span>
+            <KpiIcon kind="days" />
+          </div>
+          <dd className={styles.kpiValue}>{summary.activeDays}</dd>
+          <dd className={styles.kpiSub}>{t('kpi.daysUnit')}</dd>
         </div>
         <div className={styles.kpiCard}>
           <div className={styles.kpiTop}>
