@@ -1,58 +1,78 @@
 # @abcdefu_cja/dsh-usage-stats
 
-DSH Web 的 API 用量统计插件：精确统计 token、请求、完成轮次、活跃天数、缓存命中率、费用估算，并同时拉取 OpenCode 订阅配额与 DeepSeek 官方余额。以独立插件形态挂载（不属于 dsh-web-ui 家族），在设置页左侧导航提供专属「用量统计」Tab。
+[![npm version](https://img.shields.io/npm/v/@abcdefu_cja/dsh-usage-stats)](https://www.npmjs.com/package/@abcdefu_cja/dsh-usage-stats)
+[![license](https://img.shields.io/npm/l/@abcdefu_cja/dsh-usage-stats)](./LICENSE)
+[![GitHub](https://img.shields.io/badge/GitHub-jianweideng0515--create%2Fdsh--usage--stats-blue)](https://github.com/jianweideng0515-create/dsh-usage-stats)
 
-与启发式估算不同，本插件的 token 计数是**精确**的：直接来自每个请求的 provider `usage` 报告（`inputTokens`/`outputTokens` 与 `cacheReadTokens`/`cacheWriteTokens`），并采用 DSH 自身的 `(turn, step)` 替换语义，最终消息会替换其先前的用量块而不是重复累计。
+DSH Web 的 API 用量统计插件：精确统计 token、请求、轮次、活跃天数、缓存命中率与费用，并同时监控 OpenCode 订阅配额与 DeepSeek 官方余额。
 
-## 功能
+- **精确计量**：直接读取 provider `usage` 报告（`inputTokens` / `outputTokens` / `cacheReadTokens` / `cacheWriteTokens`），采用 DSH 自身的 `(turn, step)` 替换语义，最终消息替换先前用量块而不重复累计——非启发式估算
+- **独立插件**：不属于 dsh-web-ui 家族，经官方 `settings.section` 槽挂载为设置页左侧导航专属 Tab
+- **多提供商快照**：OpenCode 配额与 DeepSeek 余额并行拉取、各自失败互不影响
+
+## 目录
+
+- [功能特性](#功能特性)
+- [截图](#截图)
+- [安装](#安装)
+- [配置](#配置)
+- [余额自动检测](#余额自动检测)
+- [架构](#架构)
+- [开发](#开发)
+- [已知限制](#已知限制)
+- [许可](#许可)
+
+## 功能特性
 
 - **用量概览 Tab**
-  
   - 常驻 KPI 区：Token 总量（含费用）、请求数、完成轮次、活跃天数、平均缓存命中率、提供商动态卡（OpenCode 周配额 / DeepSeek 余额）
   - Token 四分色拆分条（输入 / 缓存读 / 缓存写 / 输出）
-  - **堆叠柱状趋势图**：按模型分段着色，Y 轴中文单位刻度（万/亿），悬停柱子显示当日明细 tooltip（总用量 / 费用 / 分模型 Top5+其他 / 缓存命中率）
+  - 堆叠柱状趋势图：按模型分段着色，Y 轴中文单位刻度（万/亿），悬停柱子显示当日明细（总用量 / 费用 / 分模型 Top5+其他 / 缓存命中率）
   - 模型明细表（请求数 / token / 费用）
-
-  <img src="docs/image-20260816035032614.png" alt="用量概览 Tab：KPI 卡、Token 拆分、堆叠柱状趋势图、模型明细" width="480" />
-  
 - **模型与缓存 Tab**：模型占比 Donut 图 + 缓存效率诊断（命中率、节省 token、节省比例）
-
-  <img src="docs/image-20260816035059875.png" alt="模型与缓存 Tab：模型占比 Donut 与缓存效率诊断" width="480" />
-
-- **余额与配额 Tab**：OpenCode 订阅配额三窗口进度条（滚动 / 每周 / 每月 + 重置倒计时）；DeepSeek 官方余额（金额 / 预计可用天数 / 充值链接跳转官方充值页 / 手动刷新）
-
-  <img src="docs/image-20260816035141846.png" alt="余额与配额 Tab：OpenCode 配额三窗口与 DeepSeek 余额" width="480" />
-
+- **余额与配额 Tab**：OpenCode 订阅配额三窗口进度条（滚动 / 每周 / 每月 + 重置倒计时）；DeepSeek 官方余额（金额 / 预计可用天数 / 充值页跳转 / 手动刷新）
 - **会话用量面板**：会话页按钮展开当前会话用量（累计 / 最近请求 / 进行中轮次实时消耗）
+- 7 / 14 / 30 / 90 天与自定义范围切换，展开时 30s 轮询
 
-  <img src="docs/image-20260816035247662.png" alt="会话页用量面板：累计消耗与最近请求" width="640" />
+## 截图
 
-## 架构
+### 用量概览
 
-- **宿主端**：订阅 `session/event`（全局、所有会话），把每次请求折入 `UsageStatsMeter`（token / 请求 / 轮次 / 费用 / 最近请求元数据）。按日（本地时区 `YYYY-MM-DD`）与分模型桶聚合，落盘到 `~/.dsh/dsh-usage-stats.json`（30s 防抖写盘 + flush/dispose 即时写，原子 `tmp + rename`，损坏文件转 `.bak` 重建）。只读路由 `/api/dsh-usage-stats/*` 带 loopback 围栏。余额客户端**并行**拉取全部已检测 provider 的快照（OpenCode `/v1/usage` 配额 + DeepSeek `/user/balance` 金额），各自失败互不影响。
-- **浏览器端**：注册设置页左侧导航独立 Tab（官方 `settings.section` 槽，id `usage-stats`；不属于任何家族分组）。也注册会话页用量按钮（`conversation.session.header.utilities` 槽）。
+<img src="docs/image-20260816035032614.png" alt="用量概览 Tab：KPI 卡、Token 拆分、堆叠柱状趋势图、模型明细" width="480" />
+
+### 模型与缓存
+
+<img src="docs/image-20260816035059875.png" alt="模型与缓存 Tab：模型占比 Donut 与缓存效率诊断" width="480" />
+
+### 余额与配额
+
+<img src="docs/image-20260816035141846.png" alt="余额与配额 Tab：OpenCode 配额三窗口与 DeepSeek 余额" width="480" />
+
+### 会话用量面板
+
+<img src="docs/image-20260816035247662.png" alt="会话页用量面板：累计消耗与最近请求" width="640" />
 
 ## 安装
 
-独立插件，与 dsh-web-ui 家族及其聚合包无关。
-
-**方式一：npm 安装**
+### npm（推荐）
 
 ```sh
 npm i @abcdefu_cja/dsh-usage-stats
 dsh plugin --profile web add @abcdefu_cja/dsh-usage-stats
 ```
 
-**方式二：本地 link（开发 / 从 GitHub 克隆）**
+### GitHub 克隆 / 本地开发
 
 ```sh
 git clone https://github.com/jianweideng0515-create/dsh-usage-stats
 dsh plugin --profile web add link:/path/to/dsh-usage-stats
 ```
 
-安装后重启 `dsh web`，在设置页左侧导航可见「用量统计」入口：
+安装后重启 `dsh web`，设置页左侧导航出现「用量统计」入口：
 
 <img src="docs/image-20260816034838256.png" alt="设置页左侧导航中的用量统计入口" style="width: 280px;" />
+
+### 配置文件方式（可选）
 
 也可写入个人 DSH 覆盖层 `~/.dsh/config.yaml`（保存即热加载）：
 
@@ -68,7 +88,7 @@ dsh plugin --profile web add link:/path/to/dsh-usage-stats
           refreshMs: 600000
 ```
 
-所有配置项均可选（默认值见下表）。
+所有配置项均可选，默认值见下表。
 
 ## 配置
 
@@ -84,7 +104,14 @@ dsh plugin --profile web add link:/path/to/dsh-usage-stats
 | `balance.apiKeyEnv` | `string` | `DEEPSEEK_API_KEY` | 存放 provider API key 的环境变量名（优先进程环境变量，其次 `~/.dsh/.credentials.yaml`） |
 | `balance.refreshMs` | `number` | `600000` | 余额刷新间隔（毫秒，最小 1000） |
 
-`ModelPrice` 为 `{ input, cacheRead, cacheWrite, output }`，非负数。内置 DeepSeek 价目：`deepseek-chat` `{ input: 2, cacheRead: 0.5, cacheWrite: 2, output: 8 }`；`deepseek-reasoner` `{ input: 4, cacheRead: 1, cacheWrite: 4, output: 16 }`（每百万 token，CNY）。
+`ModelPrice` 为 `{ input, cacheRead, cacheWrite, output }`，非负数。内置 DeepSeek 价目：
+
+| 模型 | input | cacheRead | cacheWrite | output |
+|---|---|---|---|---|
+| `deepseek-chat` | 2 | 0.5 | 2 | 8 |
+| `deepseek-reasoner` | 4 | 1 | 4 | 16 |
+
+（每百万 token，CNY）
 
 ## 余额自动检测
 
@@ -95,25 +122,37 @@ dsh plugin --profile web add link:/path/to/dsh-usage-stats
 | OpenCode Go（`opencode-go`） | `GET https://opencode.ai/zen/go/v1/usage`，key 环境变量 `OPENCODE_GO_API_KEY` | 订阅配额三窗口（滚动 / 每周 / 每月） |
 | DeepSeek（`deepseek`） | `GET https://api.deepseek.com/user/balance`，key 环境变量 `DEEPSEEK_API_KEY` | 金额余额 + 预计可用天数 |
 
-## 导出形态
+## 架构
 
-函数/命名空间插件：`inject` / `Config` / `apply`，无默认导出。宿主端还导出 `USAGE_STATS_METER_KEY`（宿主挂到上下文、路由与余额任务读取的 symbol）与 `USAGE_STATS_SETTINGS_NAMESPACE`。计量、计价、存储、查询与 provider 检测模块均为纯函数并有单元测试。
+```
+session/event 流（全局）
+      │
+      ▼
+宿主端 UsageStatsMeter ──► 按日 / 分模型桶 ──► ~/.dsh/dsh-usage-stats.json（防抖落盘）
+      │
+      ▼
+只读 HTTP 路由 /api/dsh-usage-stats/*（loopback 围栏）──► 浏览器端 Tab / 会话面板（30s 轮询）
+      │
+      ▼
+余额客户端（并行）：OpenCode /v1/usage 配额 + DeepSeek /user/balance 金额
+```
 
-## 模型体验
+- **宿主端**：订阅 `session/event`（全局、所有会话），把每次请求折入 `UsageStatsMeter`（token / 请求 / 轮次 / 费用 / 最近请求元数据）。按日（本地时区 `YYYY-MM-DD`）与分模型桶聚合，落盘 `~/.dsh/dsh-usage-stats.json`（30s 防抖 + flush/dispose 即时写，原子 `tmp + rename`，损坏文件转 `.bak` 重建）。余额客户端并行拉取全部已检测 provider 的快照，各自失败互不影响。
+- **浏览器端**：注册设置页左侧导航独立 Tab（官方 `settings.section` 槽，id `usage-stats`）与会话页用量按钮（`conversation.session.header.utilities` 槽）。
 
-### 提示词与工具面
+插件为函数/命名空间形态：`inject` / `Config` / `apply`，无默认导出。宿主端另导出 `USAGE_STATS_METER_KEY`（挂到上下文的 meter symbol）与 `USAGE_STATS_SETTINGS_NAMESPACE`。计量、计价、存储、查询与 provider 检测模块均为纯函数并有单元测试。
 
-无。插件不注入任何提示片段、不注册任何工具：只消费持久化的 `session/event` 流并暴露只读 HTTP 路由；浏览器卡片经官方 `settings.section` 槽渲染。
+对模型透明：不注入任何提示片段、不注册任何工具，每请求零额外 token，无 KV 缓存稳定性影响。
 
-### Token 影响
+## 开发
 
-每请求零额外 token。
+```sh
+pnpm install
+pnpm build    # tsc -b && tsdown（宿主 ESM + 浏览器闭包工厂 bundle）
+pnpm test     # vitest：宿主纯函数单测 + jsdom 组件测试
+```
 
-### KV 缓存影响
-
-无系统提示词贡献，无缓存稳定性影响。
-
-## 已知限制与后续工作
+## 已知限制
 
 - **费用是估算**：按内置或用户价目表 × provider 上报用量计算，非账单方发票；请以实际账单为准。
 - **余额取决于 provider 端点**：DeepSeek 官方余额接口要求有效官方 key（OpenCode 的 key 不被接受）；OpenCode 配额接口可能受 Cloudflare 对非浏览器 UA 的延迟惩罚（已用浏览器 UA + 25s 超时缓解）。
