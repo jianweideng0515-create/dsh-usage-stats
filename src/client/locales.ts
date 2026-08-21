@@ -96,6 +96,11 @@ export interface UsageStatsCopy {
   'trend.metric.tokens': string
   'trend.metric.cost': string
   'trend.metric.requests': string
+  'export.csv': string
+  'top.title': string
+  'top.session': string
+  'top.workspace': string
+  'alert.daily': string
   'chart.donut': string
   'chart.other': string
   'chart.noData': string
@@ -224,6 +229,11 @@ export const zh: UsageStatsCopy = {
   'trend.metric.tokens': 'Tokens',
   'trend.metric.cost': '费用',
   'trend.metric.requests': '请求数',
+  'export.csv': '导出 CSV',
+  'top.title': '最贵会话',
+  'top.session': '会话',
+  'top.workspace': '工作区',
+  'alert.daily': '今日费用已超阈值',
   'chart.donut': '模型占比',
   'chart.other': '其他',
   'chart.noData': '暂无数据',
@@ -349,6 +359,11 @@ export const en: UsageStatsCopy = {
   'trend.metric.tokens': 'Tokens',
   'trend.metric.cost': 'Cost',
   'trend.metric.requests': 'Requests',
+  'export.csv': 'Export CSV',
+  'top.title': 'Top sessions',
+  'top.session': 'Session',
+  'top.workspace': 'Workspace',
+  'alert.daily': "Today's cost exceeded the threshold",
   'chart.donut': 'Model share',
   'chart.other': 'Others',
   'chart.noData': 'No data yet',

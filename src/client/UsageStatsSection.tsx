@@ -52,6 +52,8 @@ export function UsageStatsSection(_props: PropsRuntime<'settings.section'>): Rea
         rangeDays={state.rangeDays}
         customFrom={state.customFrom}
         customTo={state.customTo}
+        rangeFrom={state.rangeFrom}
+        rangeTo={state.rangeTo}
         onRangeDays={shared.face.onRangeDays}
         onCustomFrom={shared.face.onCustomFrom}
         onCustomTo={shared.face.onCustomTo}

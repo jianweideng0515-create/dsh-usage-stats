@@ -32,7 +32,10 @@ DSH Web 的 API 用量统计插件：精确统计 token、请求、轮次、活�
 - **模型与缓存 Tab**：模型占比 Donut 图 + 缓存效率诊断（命中率、节省 token、节省比例）
 - **余额与配额 Tab**：OpenCode 订阅配额三窗口进度条（滚动 / 每周 / 每月 + 重置倒计时）；DeepSeek 官方余额（金额 / 预计可用天数 / 充值页跳转 / 手动刷新）
 - **会话用量面板**：会话页按钮展开当前会话用量（累计 / 最近请求 / 进行中轮次实时消耗）
-- 7 / 14 / 30 / 90 天与自定义范围切换，展开时 30s 轮询
+- **数据导出**：一键下载当前范围的按日 × 分模型明细 CSV（UTF-8 BOM，Excel 直接打开）
+- **最贵会话排行**：按费用降序 Top 10，快速定位异常消耗
+- **日费用阈值提醒**：配置 `alertDailyCost` 后，今日费用超限即在用量页顶部常驻横幅提示
+- 7 / 14 / 30 / 90 天与自定义范围切换，展开时 30s 轮询（ETag 条件请求，未变化 304 短路）
 
 ## 截图
 
@@ -98,6 +101,7 @@ dsh plugin --profile web add link:/path/to/dsh-usage-stats
 | `prices` | `Record<string, ModelPrice>` | 内置 DeepSeek 价目表 | 每百万 token 单价，按模型键（`input` / `cacheRead` / `cacheWrite` / `output`）；用户项覆盖内置表 |
 | `defaultPrice` | `ModelPrice` | 无 | 未在 `prices` 中的模型的兜底单价；缺省时未知模型按 0 计价 |
 | `currency` | `string` | `CNY` | 费用与余额的显示货币（CNY 显示 ¥，USD 显示 $） |
+| `alertDailyCost` | `number` | 无 | 日费用阈值：今日费用达到该值时，用量页顶部渲染超限横幅；未配置关闭 |
 | `balance.mode` | `'auto' \| 'manual' \| 'off'` | `auto` | `auto` 自动检测全部已知 provider（OpenCode 配额 + DeepSeek 余额）；`manual` 使用固定 `baseUrl`；`off` 关闭余额拉取 |
 | `balance.baseUrl` | `string` | 无 | 余额端点基址（`manual` 模式必填） |
 | `balance.path` | `string` | `/user/balance` | 追加到 `baseUrl` 的余额路径 |

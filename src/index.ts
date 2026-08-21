@@ -59,6 +59,8 @@ export interface Config {
   defaultPrice?: ModelPrice
   /** 计价货币显示名，默认 CNY。 */
   currency?: string
+  /** 日费用阈值（货币口径与 cost 相同）：今日费用达到该值时前端渲染超限横幅；未配置关闭。 */
+  alertDailyCost?: number
   /** 余额拉取配置；缺省 auto 自动推断。 */
   balance?: BalanceSettings
 }
@@ -77,6 +79,7 @@ export const Config: z<Config> = z.object({
   prices: z.dict(priceSchema),
   defaultPrice: priceSchema,
   currency: z.string().default('CNY'),
+  alertDailyCost: z.number().min(0),
   balance: z.object({
     mode: z.union([z.const('auto'), z.const('manual'), z.const('off')]).default('auto'),
     baseUrl: z.string(),
@@ -236,7 +239,8 @@ export function apply(ctx: Context, config: Config = {}): void {
     const offEvent = ctx.on('session/event', onEvent, { global: true })
     const offFlush = ctx.on('session/flush', onFlush, { global: true })
     // 路由 handler 运行时从 ctx 读当前 meter，故注册一次即可随重挂载取到最新状态。
-    const routes = makeRoutes(ctx, balance)
+    // 日费用阈值实时读取设置（热更新即生效）。
+    const routes = makeRoutes(ctx, balance, () => resolve().alertDailyCost)
     const routeDisposers = routes.map((route) => ctx.webServer.register(route))
     // 卸载时落盘一次（含正常 dispose 的最终写盘）。
     const disposeEffect = ctx.effect(() => () => {
