@@ -131,11 +131,14 @@ function detectProviderEndpoint(
     }
   }
   if (hostname === 'opencode.ai' || hostname.endsWith('.opencode.ai')) {
-    const origin = new URL(baseURL).origin
+    const u = new URL(baseURL)
+    // 保留同源内的路径前缀（如 /zen/go/v1）：配额端点位于该前缀之下，
+    // 退回 origin 会得到 https://opencode.ai/usage 而 404。
+    const base = u.origin + u.pathname.replace(/\/+$/, '')
     return {
       ok: true,
       endpoint: {
-        baseUrl: origin,
+        baseUrl: base,
         path: '/usage',
         apiKeyEnv: apiKeyEnv ?? 'OPENCODE_GO_API_KEY',
         source: `auto:${provider}`,

@@ -59,14 +59,18 @@ describe('detectBalanceEndpoint', () => {
     }
   })
 
-  it('auto：opencode.ai 主机 baseURL 推断 /usage', () => {
+  it('auto：opencode.ai 主机 baseURL 推断 /usage（保留路径前缀）', () => {
     const ctx = fakeCtx({
       llm: { listConfigurableProviders: () => [{ provider: 'opencode-go', displayName: 'x', settingsNs: 'ns', settingsPath: [] }] },
       settings: { get: () => ({ baseURL: 'https://opencode.ai/zen/go/v1' }) },
     })
     const r = detectBalanceEndpoint(ctx, { mode: 'auto' })
     expect(r.ok).toBe(true)
-    if (r.ok) expect(r.endpoint.path).toBe('/usage')
+    if (r.ok) {
+      expect(r.endpoint.path).toBe('/usage')
+      // 路径前缀必须保留：退回 origin 会得到 https://opencode.ai/usage 而 404
+      expect(r.endpoint.baseUrl).toBe('https://opencode.ai/zen/go/v1')
+    }
   })
 
   it('auto：未知 provider 无 baseURL 不可推断', () => {
