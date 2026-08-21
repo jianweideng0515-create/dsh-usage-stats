@@ -259,13 +259,23 @@ function bucketSegments(
   ]
 }
 
-/** 用量趋势堆叠柱状图（无库 SVG + CSS）：Y 轴刻度 + 按模型分段 + hover 明细 tooltip。 */
+/** 趋势图指标：token 总量（按模型堆叠）/ 费用 / 请求数。 */
+export type TrendMetric = 'tokens' | 'cost' | 'requests'
+
+const TREND_METRICS: Array<{ key: TrendMetric; labelKey: string }> = [
+  { key: 'tokens', labelKey: 'trend.metric.tokens' },
+  { key: 'cost', labelKey: 'trend.metric.cost' },
+  { key: 'requests', labelKey: 'trend.metric.requests' },
+]
+
+/** 用量趋势柱状图（无库 SVG + CSS）：指标切换 + Y 轴刻度 + 按模型分段 + hover 明细 tooltip。 */
 function TrendAreaChart(props: {
   t: (key: string) => string
   costCurrency: string
-  series: Array<{ bucket: string; tokens: number; cost: number; hitRate: number; byModel: Array<{ model: string; tokens: number }> }>
+  metric: TrendMetric
+  series: Array<{ bucket: string; tokens: number; cost: number; requests: number; hitRate: number; byModel: Array<{ model: string; tokens: number }> }>
 }): ReactElement {
-  const { t, costCurrency, series } = props
+  const { t, costCurrency, metric, series } = props
   const [hover, setHover] = useState<number | null>(null)
   const width = 600
   const height = 140
@@ -274,9 +284,18 @@ function TrendAreaChart(props: {
   if (series.length < 2) {
     return <p className={styles.status}>{t('chart.insufficientData')}</p>
   }
+  // 指标取值与格式：tokens 中文万/亿；费用带货币符号；请求数取整。
+  const valueOf = (p: { tokens: number; cost: number; requests: number }): number =>
+    metric === 'tokens' ? p.tokens : metric === 'cost' ? p.cost : p.requests
+  const fmt = metric === 'tokens'
+    ? formatCnTokens
+    : metric === 'cost'
+      ? (v: number): string => `${costSymbol(costCurrency)}${formatCost(v)}`
+      : (v: number): string => String(Math.round(v))
   // Y 轴上限 = 数据最大值 / 0.8：最高柱严格占纵轴高度的 80%（顶部留白 20%）
-  const dataMax = Math.max(...series.map((p) => p.tokens), 0)
-  const axisMax = dataMax <= 0 ? 1 : dataMax / 0.8
+  const dataMax = Math.max(...series.map((p) => valueOf(p)), 0)
+  // 请求数为整数口径，上限向上取整避免小数刻度
+  const axisMax = dataMax <= 0 ? 1 : metric === 'requests' ? Math.max(1, Math.ceil(dataMax / 0.8)) : dataMax / 0.8
   const innerH = height - padY * 2
   const y = (v: number): number => padY + innerH - (v / axisMax) * innerH
   // Y 轴刻度：0 / 25% / 50% / 75% / 100% × axisMax
@@ -302,7 +321,7 @@ function TrendAreaChart(props: {
                 transform: v === 0 ? 'translateY(0)' : v === axisMax ? 'translateY(-100%)' : 'translateY(-50%)',
               }}
             >
-              {formatCnTokens(v)}
+              {fmt(v)}
             </span>
           ))}
         </div>
@@ -312,7 +331,7 @@ function TrendAreaChart(props: {
             viewBox={`0 0 ${width} ${height}`}
             preserveAspectRatio="none"
             role="img"
-            aria-label={series.map((p) => `${p.bucket}: ${formatCnTokens(p.tokens)}`).join('; ')}
+            aria-label={series.map((p) => `${p.bucket}: ${fmt(valueOf(p))}`).join('; ')}
           >
             {/* 网格线：对齐 Y 轴刻度 */}
             {ticks.map((v) => (
@@ -326,7 +345,6 @@ function TrendAreaChart(props: {
               />
             ))}
             {series.map((p, i) => {
-              const segs = bucketSegments(p, t)
               // 堆叠基准 = 内区底部（与 0 刻度线/网格一致），避免底部 padY 留白造成柱顶错位
               let base = height - padY
               return (
@@ -337,13 +355,16 @@ function TrendAreaChart(props: {
                   {hover === i ? (
                     <rect x={padX + i * colW} y={padY} width={colW} height={innerH} fill="var(--dsw-alias-state-business-primary)" opacity="0.06" />
                   ) : null}
-                  {segs.map((s) => {
-                    const segH = (s.tokens / axisMax) * innerH
+                  {(metric === 'tokens'
+                    ? bucketSegments(p, t).map((s) => ({ key: s.model, value: s.tokens, colorVar: s.colorVar }))
+                    : [{ key: metric, value: valueOf(p), colorVar: 'var(--dsw-alias-state-business-primary)' }]
+                  ).map((s) => {
+                    const segH = (s.value / axisMax) * innerH
                     const top = base - segH
                     base = top
                     return (
                       <rect
-                        key={s.model}
+                        key={s.key}
                         x={barX(i)}
                         y={top}
                         width={barW}
@@ -366,17 +387,26 @@ function TrendAreaChart(props: {
               role="tooltip"
             >
               <div className={styles.tooltipDate}>{hovered.bucket}</div>
-              <div className={styles.tooltipRow}><span>{t('trend.total')}</span><strong>{formatCnTokens(hovered.tokens)}</strong></div>
-              <div className={styles.tooltipRow}><span>{t('trend.cost')}</span><strong>{costSymbol(costCurrency)}{formatCost(hovered.cost)}</strong></div>
-              <div className={styles.tooltipModels}>
-                {bucketSegments(hovered, t).map((s) => (
-                  <div className={styles.tooltipModel} key={s.model}>
-                    <span className={styles.dot} style={{ background: s.colorVar }} />
-                    <span className={styles.tooltipModelName}>{s.model}</span>
-                    <strong>{formatCnTokens(s.tokens)}</strong>
+              {metric === 'tokens' ? (
+                <>
+                  <div className={styles.tooltipRow}><span>{t('trend.total')}</span><strong>{formatCnTokens(hovered.tokens)}</strong></div>
+                  <div className={styles.tooltipRow}><span>{t('trend.cost')}</span><strong>{costSymbol(costCurrency)}{formatCost(hovered.cost)}</strong></div>
+                  <div className={styles.tooltipModels}>
+                    {bucketSegments(hovered, t).map((s) => (
+                      <div className={styles.tooltipModel} key={s.model}>
+                        <span className={styles.dot} style={{ background: s.colorVar }} />
+                        <span className={styles.tooltipModelName}>{s.model}</span>
+                        <strong>{formatCnTokens(s.tokens)}</strong>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </>
+              ) : (
+                <>
+                  <div className={styles.tooltipRow}><span>{metric === 'cost' ? t('trend.cost') : t('metric.requests')}</span><strong>{fmt(valueOf(hovered))}</strong></div>
+                  <div className={styles.tooltipRow}><span>{t('trend.total')}</span><strong>{formatCnTokens(hovered.tokens)}</strong></div>
+                </>
+              )}
               <div className={styles.tooltipRow}><span>{t('trend.hitRate')}</span><strong>{formatRate(hovered.hitRate)}</strong></div>
             </div>
           ) : null}
@@ -495,17 +525,32 @@ function KpiOverview(props: {
   )
 }
 
-/** 用量概览 Tab 内容：趋势面积图 + 会话指标 + 模型明细（KPI 与 Token 拆分在 Tab 上方常驻）。 */
+/** 用量概览 Tab 内容：趋势图（指标可切换）+ 会话指标 + 模型明细（KPI 与 Token 拆分在 Tab 上方常驻）。 */
 function OverviewTab(props: {
   t: (key: string) => string
   summary: SummaryResponse
   costCurrency: string
 }): ReactElement {
   const { t, summary, costCurrency } = props
+  const [metric, setMetric] = useState<TrendMetric>('tokens')
   return (
     <>
-      <h4 className={styles.heading}>{t('trend.title')}</h4>
-      <TrendAreaChart t={t} costCurrency={costCurrency} series={summary.series} />
+      <div className={styles.trendHead}>
+        <h4 className={styles.heading}>{t('trend.title')}</h4>
+        <div className={styles.trendSwitch} role="group" aria-label={t('trend.title')}>
+          {TREND_METRICS.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              className={metric === m.key ? styles.trendSwitchOn : styles.trendSwitchBtn}
+              onClick={() => setMetric(m.key)}
+            >
+              {t(m.labelKey)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <TrendAreaChart t={t} costCurrency={costCurrency} metric={metric} series={summary.series} />
       {summary.perSession !== null ? (
         <dl className={styles.metrics}>
           <div><dt>{t('metric.lastHit')}</dt><dd>{summary.perSession.lastRequestHitRate === null ? '-' : formatRate(summary.perSession.lastRequestHitRate)}</dd></div>

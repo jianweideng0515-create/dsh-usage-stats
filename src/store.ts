@@ -2,14 +2,22 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { dirname, join } from 'node:path'
 import { createEmptyBucket, localDateKey } from './meter.ts'
 import type { DayBucket, ModelBucket, SessionRecord, UsageStatsState } from './meter.ts'
+import type { BalanceSnapshot } from './balance.ts'
 
-/** 持久化文件形状（version 1）。 */
+/** 持久化的余额/配额快照表（重启恢复用，避免重启后余额卡空窗）。 */
+export interface PersistedBalance {
+  savedAt: string
+  providers: Record<string, BalanceSnapshot>
+}
+
+/** 持久化文件形状（version 1；balance 节为可选增量，旧文件缺失兼容）。 */
 export interface PersistedFile {
   version: 1
   meta: { installedAt: string; lastSavedAt: string }
   totals: ModelBucket
   byDay: Record<string, DayBucket>
   sessions: Record<string, SessionRecord>
+  balance?: PersistedBalance
 }
 
 export const BY_DAY_RETENTION_DAYS = 730
@@ -35,6 +43,7 @@ export function trimSessions(sessions: Record<string, SessionRecord>, max = SESS
 
 export class UsageStatsStore {
   private lastInstalled: string | null = null
+  private lastLoadedBalance: PersistedBalance | null = null
 
   constructor(private readonly filePath: string) {}
 
@@ -59,11 +68,21 @@ export class UsageStatsStore {
       return null
     }
     this.lastInstalled = parsed.meta?.installedAt ?? null
+    // 余额节宽松校验：形状不符按缺失处理，不影响计量状态恢复。
+    this.lastLoadedBalance = parsed.balance !== undefined && typeof parsed.balance === 'object' && parsed.balance !== null
+      && typeof parsed.balance.providers === 'object' && parsed.balance.providers !== null
+      ? parsed.balance
+      : null
     return {
       totals: { ...createEmptyBucket(), ...parsed.totals },
       byDay: parsed.byDay ?? {},
       sessions: parsed.sessions ?? {},
     }
+  }
+
+  /** load 时记录的余额快照表；从未 load 或文件无该节返回 null。 */
+  lastBalance(): PersistedBalance | null {
+    return this.lastLoadedBalance
   }
 
   /** load 时记录 meta.installedAt；从未 load 返回 null。 */
@@ -72,7 +91,7 @@ export class UsageStatsStore {
   }
 
   /** 裁剪后原子写盘（tmp + rename）。失败抛错，由调用方告警。 */
-  save(state: UsageStatsState, installedAt: string | null): void {
+  save(state: UsageStatsState, installedAt: string | null, balance?: PersistedBalance): void {
     const now = Date.now()
     const byDay = { ...state.byDay }
     trimByDay(byDay, now)
@@ -87,6 +106,7 @@ export class UsageStatsStore {
       totals: state.totals,
       byDay,
       sessions,
+      ...(balance === undefined ? {} : { balance }),
     }
     const dir = dirname(this.filePath)
     mkdirSync(dir, { recursive: true })

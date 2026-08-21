@@ -93,6 +93,9 @@ export interface UsageStatsCopy {
   'trend.total': string
   'trend.cost': string
   'trend.hitRate': string
+  'trend.metric.tokens': string
+  'trend.metric.cost': string
+  'trend.metric.requests': string
   'chart.donut': string
   'chart.other': string
   'chart.noData': string
@@ -218,6 +221,9 @@ export const zh: UsageStatsCopy = {
   'trend.total': '总用量',
   'trend.cost': '费用',
   'trend.hitRate': '缓存命中率',
+  'trend.metric.tokens': 'Tokens',
+  'trend.metric.cost': '费用',
+  'trend.metric.requests': '请求数',
   'chart.donut': '模型占比',
   'chart.other': '其他',
   'chart.noData': '暂无数据',
@@ -340,6 +346,9 @@ export const en: UsageStatsCopy = {
   'trend.total': 'Total usage',
   'trend.cost': 'Cost',
   'trend.hitRate': 'Cache hit rate',
+  'trend.metric.tokens': 'Tokens',
+  'trend.metric.cost': 'Cost',
+  'trend.metric.requests': 'Requests',
   'chart.donut': 'Model share',
   'chart.other': 'Others',
   'chart.noData': 'No data yet',

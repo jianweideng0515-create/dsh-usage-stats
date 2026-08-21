@@ -611,6 +611,45 @@
   min-width: 0;
 }
 
+/* 趋势标题行：标题 + 指标切换按钮组 */
+.trendHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.trendSwitch {
+  display: flex;
+  gap: 2px;
+  flex: none;
+}
+
+.trendSwitchBtn,
+.trendSwitchOn {
+  font: inherit;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  transition: background 0.13s, color 0.13s, border-color 0.13s;
+}
+
+.trendSwitchBtn:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+.trendSwitchOn {
+  border-color: var(--dsw-alias-state-business-primary);
+  background: var(--dsw-alias-state-business-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+  cursor: default;
+}
+
 /* Y 轴刻度列（与 SVG 等高，刻度按百分比绝对定位对齐网格线） */
 .trendYAxis {
   position: relative;

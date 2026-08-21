@@ -221,5 +221,35 @@ describe('UsageStatsCard', () => {
     expect(screen.getAllByText('4000.0万').length).toBeGreaterThanOrEqual(2)
     expect(screen.getByText('90.00%')).toBeTruthy()
   })
+
+  it('趋势图指标切换：请求数模式下 tooltip 显示请求量', () => {
+    const t = (key: string) => key
+    const { container } = render(<UsageStatsCard
+      t={t}
+      summary={{
+        ...summary,
+        series: [
+          { bucket: '2026-08-15', requests: 137, tokens: 30_000_000, cost: 0.2, hitRate: 0.95, byModel: [{ model: 'deepseek-chat', tokens: 30_000_000 }] },
+          { bucket: '2026-08-16', requests: 200, tokens: 40_000_000, cost: 0.3, hitRate: 0.9, byModel: [{ model: 'deepseek-chat', tokens: 40_000_000 }] },
+        ],
+      }}
+      balances={balances}
+      loading={false}
+      error={null}
+      {...baseProps}
+    />)
+    // 切到「请求数」指标
+    fireEvent.click(screen.getByText('trend.metric.requests'))
+    const hitAreas = container.querySelectorAll('[data-trend-hit="true"]')
+    fireEvent.mouseEnter(hitAreas[0])
+    // tooltip 主行显示请求数（137），且不再有分模型明细行
+    expect(screen.getAllByText('metric.requests').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('137')).toBeTruthy()
+    expect(screen.queryByText('deepseek-r1')).toBeNull()
+    // 切回 Tokens：恢复按模型堆叠明细（3000.0万：总用量与模型行同值）
+    fireEvent.click(screen.getByText('trend.metric.tokens'))
+    fireEvent.mouseEnter(hitAreas[0])
+    expect(screen.getAllByText('3000.0万').length).toBeGreaterThanOrEqual(2)
+  })
 })
 

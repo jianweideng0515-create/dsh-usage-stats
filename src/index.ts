@@ -10,6 +10,7 @@ import { UsageStatsMeter } from './meter.ts'
 import { priceBuckets, resolvePrices } from './pricing.ts'
 import type { ModelPrice } from './pricing.ts'
 import { UsageStatsStore } from './store.ts'
+import type { PersistedBalance } from './store.ts'
 import { makeRoutes } from './routes.ts'
 import { BalanceClient } from './balance.ts'
 import type { BalanceSettings } from './provider-detect.ts'
@@ -96,6 +97,8 @@ export function apply(ctx: Context, config: Config = {}): void {
   let meter: UsageStatsMeter
   let store: UsageStatsStore
   let installedAt: string | null = null
+  /** 最近一轮余额快照表（onSettled 捕获 / mount 时从落盘恢复），随写盘持久化。 */
+  let pendingBalance: PersistedBalance | null = null
 
   // 防抖/节流计时器（跨 mount/unmount 复用，重建时清空避免陈旧写盘）。
   let saveTimer: ReturnType<typeof setTimeout> | undefined
@@ -131,6 +134,16 @@ export function apply(ctx: Context, config: Config = {}): void {
     getEnv: (name) => process.env[name] ?? readCredentialsFile()[name],
     // 费用计价货币跟随插件设置 currency（费用行 ¥/$ 符号）。
     getCostCurrency: () => resolve().currency,
+    // 每轮刷新落定即捕获快照表并立即落盘：余额刷新间隔长（默认 10 分钟），
+    // 若只搭防抖写盘的车，重启会丢掉最近一轮快照。
+    onSettled: (providers) => {
+      pendingBalance = { savedAt: new Date().toISOString(), providers }
+      try {
+        if (meter !== undefined && store !== undefined) saveNow(meter, store)
+      } catch {
+        // meter 尚未挂载时忽略：mount 后首轮刷新会再触发
+      }
+    },
   })
   const syncBalance = (): void => {
     const value = resolve().balance ?? { mode: 'auto' }
@@ -165,7 +178,7 @@ export function apply(ctx: Context, config: Config = {}): void {
   /** 立即写盘；任何异常仅告警，不抛出。 */
   const saveNow = (target: UsageStatsMeter, file: UsageStatsStore): void => {
     try {
-      file.save(target.state(), installedAt)
+      file.save(target.state(), installedAt, pendingBalance ?? undefined)
     } catch (error) {
       ctx.logger.warn(`usage-stats: 写盘失败: ${String(error)}`)
     }
@@ -197,6 +210,12 @@ export function apply(ctx: Context, config: Config = {}): void {
     if (loaded !== null) {
       installedAt = store.lastInstalledAt() ?? installedAt
       meter.restore(loaded)
+    }
+    // 恢复上次持久化的余额快照表：重启后余额卡立即可展示（陈旧度由 updatedAt 呈现）。
+    const savedBalance = store.lastBalance()
+    if (savedBalance !== null) {
+      pendingBalance = savedBalance
+      balance.restore(savedBalance.providers)
     }
     syncPrices(meter)
     syncBalance()

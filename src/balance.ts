@@ -32,6 +32,8 @@ export interface BalanceClientDeps {
   getEnv: (name: string) => string | undefined
   /** 费用计价货币（插件设置 currency 透传；缺省 CNY）。 */
   getCostCurrency?: () => string
+  /** 每轮刷新落定后回调（含成功与失败快照），宿主用于持久化最新快照表。 */
+  onSettled?: (providers: Record<string, BalanceSnapshot>) => void
 }
 
 const FAIL = (error: string, source: BalanceEndpoint | null, costCurrency = 'CNY'): BalanceSnapshot => ({
@@ -97,6 +99,13 @@ export class BalanceClient {
   setDetect(fn: () => Record<string, DetectResult>): void { this.detect = fn }
   /** 最近一次各 provider 快照（provider id → 快照；未检测到的 provider 不在表内）。 */
   snapshot(): Record<string, BalanceSnapshot> { return this.last }
+  /**
+   * 启动时恢复上次持久化的快照表：重启后余额卡立即可展示旧值（快照自带
+   * updatedAt，陈旧程度对用户可见），等待首轮拉取覆盖。
+   */
+  restore(providers: Record<string, BalanceSnapshot>): void {
+    this.last = { ...providers }
+  }
   /** 费用计价货币（设置 currency 实时读取）。 */
   private costCurrency(): string { return this.deps.getCostCurrency?.() ?? 'CNY' }
 
@@ -110,6 +119,7 @@ export class BalanceClient {
         : FAIL(result.reason, null, this.costCurrency())
     }))
     this.last = next
+    this.deps.onSettled?.(next)
     return this.last
   }
 

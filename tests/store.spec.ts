@@ -68,4 +68,55 @@ describe('UsageStatsStore', () => {
     trimSessions(sessions)
     expect(Object.keys(sessions).length).toBe(500)
   })
+
+  it('余额快照表随文件持久化并可恢复', () => {
+    const file = tempFile()
+    const store = new UsageStatsStore(file)
+    const state: UsageStatsState = {
+      totals: createEmptyBucket(),
+      byDay: {},
+      sessions: {},
+    }
+    const balance = {
+      savedAt: '2026-08-20T00:00:00.000Z',
+      providers: {
+        deepseek: { balance: 12.34, currency: 'CNY', updatedAt: '2026-08-20T00:00:00.000Z', error: null, source: null, quota: null, costCurrency: 'CNY' },
+      },
+    }
+    store.save(state, null, balance)
+    // 新实例模拟重启：load 后可取回快照表
+    const reloaded = new UsageStatsStore(file)
+    reloaded.load()
+    const restored = reloaded.lastBalance()
+    expect(restored).not.toBeNull()
+    expect(restored!.savedAt).toBe('2026-08-20T00:00:00.000Z')
+    expect(restored!.providers.deepseek.balance).toBe(12.34)
+  })
+
+  it('无余额节（旧文件）lastBalance 返回 null，形状不符按缺失处理', () => {
+    const file = tempFile()
+    writeFileSync(file, JSON.stringify({
+      version: 1,
+      meta: { installedAt: '2026-01-01T00:00:00.000Z', lastSavedAt: '2026-01-01T00:00:00.000Z' },
+      totals: createEmptyBucket(),
+      byDay: {},
+      sessions: {},
+    }))
+    const store = new UsageStatsStore(file)
+    expect(store.load()).not.toBeNull()
+    expect(store.lastBalance()).toBeNull()
+
+    const bad = tempFile()
+    writeFileSync(bad, JSON.stringify({
+      version: 1,
+      meta: { installedAt: '2026-01-01T00:00:00.000Z', lastSavedAt: '2026-01-01T00:00:00.000Z' },
+      totals: createEmptyBucket(),
+      byDay: {},
+      sessions: {},
+      balance: { savedAt: 'x' }, // 缺 providers：形状不符
+    }))
+    const store2 = new UsageStatsStore(bad)
+    store2.load()
+    expect(store2.lastBalance()).toBeNull()
+  })
 })
